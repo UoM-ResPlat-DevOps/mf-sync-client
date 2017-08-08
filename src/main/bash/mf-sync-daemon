@@ -1,0 +1,22 @@
+#!/bin/bash
+
+[[ -z $(which java) ]] && echo "Java is not found." >&2 && exit 1
+
+JAR=$(dirname $0)/mf-sync-client.jar
+[[ ! -f $JAR ]] && echo "${JAR} is not found." >&2 && exit 2
+
+java -cp $JAR vicnode.mf.client.MFSyncCLI ${1+"$@"} > /dev/null &
+
+PID=$!
+
+sleep 1
+
+if ps -p $PID > /dev/null; then
+    # pid exists, indicates the daemon started successfully.
+    echo $PID
+    exit 0
+else
+    # pid does not exist, indicates there was error and the daemon did not start.
+    java -cp $JAR vicnode.mf.client.MFSyncCLI --help
+    exit 1
+fi
