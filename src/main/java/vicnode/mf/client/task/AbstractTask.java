@@ -45,6 +45,8 @@ public abstract class AbstractTask implements Task {
             } else {
                 throw new Exception(e);
             }
+        } finally {
+            cxn.closeNe();
         }
     }
 

@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
@@ -22,6 +23,7 @@ import arc.mf.client.ServerClient;
 import vicnode.mf.client.task.sync.AssetSyncTaskProducer;
 import vicnode.mf.client.task.sync.FileSyncTaskProducer;
 import vicnode.mf.client.task.sync.FileWatchTaskProducer;
+import vicnode.mf.client.task.sync.PoisonTask;
 import vicnode.mf.client.task.sync.SyncTask;
 import vicnode.mf.client.task.sync.TaskConsumer;
 import vicnode.mf.client.util.AssetNamespaceUtils;
@@ -100,6 +102,7 @@ public class MFSync implements Runnable {
         if (_rs == null) {
             _rs = new RemoteServer(_connectionSettings.serverHost(), _connectionSettings.serverPort(),
                     _connectionSettings.useHttp(), _connectionSettings.encrypt());
+            _rs.setConnectionPooling(true);
         }
         if (_cxn == null) {
             _cxn = _rs.open();
@@ -131,14 +134,15 @@ public class MFSync implements Runnable {
              * Run FileSyncTaskProducer: go through the files in the local
              * directory, and upload them to the remote asset namespace.
              */
-            _producerThreadPool.submit(new FileSyncTaskProducer(_cxn, _logger, _rootDirectory, _rootNamespace, _queue));
+            _producerThreadPool.submit(
+                    new FileSyncTaskProducer(_cxn.duplicate(true), _logger, _rootDirectory, _rootNamespace, _queue));
 
             /*
              * Run AssetSyncTaskProducer: go through the assets in the remote
              * asset namespace, and delete the assets do not exist locally
              */
-            _producerThreadPool
-                    .submit(new AssetSyncTaskProducer(_cxn, _logger, _rootDirectory, _rootNamespace, _queue));
+            _producerThreadPool.submit(
+                    new AssetSyncTaskProducer(_cxn.duplicate(true), _logger, _rootDirectory, _rootNamespace, _queue));
 
             /*
              * Start consumer threads.
@@ -156,7 +160,14 @@ public class MFSync implements Runnable {
              */
             if (_watch) {
                 _producerThreadPool
-                        .submit(new FileWatchTaskProducer(_cxn, _logger, _rootDirectory, _rootNamespace, _queue));
+                        .submit(new FileWatchTaskProducer(_cxn.duplicate(true), _logger, _rootDirectory, _rootNamespace, _queue));
+            } else {
+                _producerThreadPool.shutdown();
+                _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+                for (int i = 0; i < _nbConsumers; i++) {
+                    _queue.put(new PoisonTask());
+                }
+                _consumerThreadPool.shutdown();
             }
 
         } catch (Throwable e) {

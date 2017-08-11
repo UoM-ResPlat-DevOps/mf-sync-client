@@ -26,6 +26,10 @@ public class TaskConsumer implements Runnable {
             while (!Thread.interrupted()) {
                 // wait for task from queue
                 _currentTask = _queue.take();
+                if (_currentTask instanceof PoisonTask) {
+                    LoggingUtils.logInfo(_logger, "Stopping consumer thread...");
+                    break;
+                }
                 // execute task
                 _currentTask.call();
             }

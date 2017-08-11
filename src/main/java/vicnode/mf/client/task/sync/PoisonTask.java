@@ -1,0 +1,23 @@
+package vicnode.mf.client.task.sync;
+
+import arc.mf.client.ServerClient.Connection;
+
+public class PoisonTask extends SyncTask {
+
+    public PoisonTask() {
+        super(null, null, null, null);
+    }
+
+    @Override
+    public void execute(Connection cxn) throws Throwable {
+        throw new UnsupportedOperationException(this.getClass().getSimpleName()
+                + " is not supposed to be executed. It is to poison the consumer thread.");
+
+    }
+
+    @Override
+    public String type() {
+        return "poison";
+    }
+
+}

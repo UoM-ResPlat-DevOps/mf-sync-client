@@ -91,7 +91,7 @@ public class AssetSyncTaskProducer implements Runnable {
                         if (assetContentSize < 0) {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {
                                 _queue.put(
-                                        new AssetDestroyTask(_cxn, _logger, _rootDirectory, assetPath, _rootNamespace));
+                                        new AssetDestroyTask(_cxn.duplicate(true), _logger, _rootDirectory, assetPath, _rootNamespace));
                             } else {
                                 LoggingUtils.logInfo(_logger,
                                         "Skipped asset: " + assetPath + "(id=" + assetId + ") No asset content found.");
@@ -102,7 +102,7 @@ public class AssetSyncTaskProducer implements Runnable {
                         if (assetPosixMTime < 0) {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {
                                 _queue.put(
-                                        new AssetDestroyTask(_cxn, _logger, _rootDirectory, assetPath, _rootNamespace));
+                                        new AssetDestroyTask(_cxn.duplicate(true), _logger, _rootDirectory, assetPath, _rootNamespace));
                             } else {
                                 LoggingUtils.logInfo(_logger, "Skipped asset: " + assetPath + "(id=" + assetId
                                         + ") No asset meta/" + PosixAttributes.DOC_TYPE + " found.");
@@ -115,15 +115,15 @@ public class AssetSyncTaskProducer implements Runnable {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {
                                 assetsToDelete.add(assetId);
                             } else {
-                                _queue.put(new AssetDownloadTask(_cxn, _logger, _rootDirectory, assetId, assetPath,
-                                        assetPosixMTime, _rootNamespace));
+                                _queue.put(new AssetDownloadTask(_cxn.duplicate(true), _logger, _rootDirectory, assetId,
+                                        assetPath, assetPosixMTime, _rootNamespace));
                             }
                         } else {
                             if (_direction == Direction.REMOTE_TO_LOCAL) {
                                 PosixAttributes fileAttrs = PosixAttributes.read(file);
                                 if (assetPosixMTime > fileAttrs.mtime()) {
-                                    _queue.put(new AssetDownloadTask(_cxn, _logger, _rootDirectory, assetId, assetPath,
-                                            assetPosixMTime, _rootNamespace));
+                                    _queue.put(new AssetDownloadTask(_cxn.duplicate(true), _logger, _rootDirectory,
+                                            assetId, assetPath, assetPosixMTime, _rootNamespace));
                                 }
                             }
                         }
@@ -141,6 +141,8 @@ public class AssetSyncTaskProducer implements Runnable {
                 Thread.currentThread().interrupt();
             }
             LoggingUtils.logError(_logger, e);
+        } finally {
+            _cxn.closeNe();
         }
     }
 
