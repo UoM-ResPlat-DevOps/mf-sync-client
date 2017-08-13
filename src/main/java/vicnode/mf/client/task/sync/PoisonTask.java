@@ -1,6 +1,6 @@
 package vicnode.mf.client.task.sync;
 
-import arc.mf.client.ServerClient.Connection;
+import vicnode.mf.client.MFSession;
 
 public class PoisonTask extends SyncTask {
 
@@ -9,7 +9,7 @@ public class PoisonTask extends SyncTask {
     }
 
     @Override
-    public void execute(Connection cxn) throws Throwable {
+    public void execute(MFSession session) throws Throwable {
         throw new UnsupportedOperationException(this.getClass().getSimpleName()
                 + " is not supposed to be executed. It is to poison the consumer thread.");
 

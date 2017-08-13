@@ -37,6 +37,42 @@ public class ConnectionSettings {
         loadFromProperties(properties);
     }
 
+    public AuthenticationDetails authenticationDetails() {
+        if (_token == null && (_domain == null || _user == null || _password == null)) {
+            return null;
+        } else {
+            if (_token == null) {
+                return new AuthenticationDetails(_app, _domain, _user, _password);
+            } else {
+                return new AuthenticationDetails(_app, _token);
+            }
+        }
+    }
+
+    public String domain() {
+        return _domain;
+    }
+
+    public Boolean encrypt() {
+        return _ssl;
+    }
+
+    public boolean hasAuthenticationDetails() {
+        return hasToken() || hasUserCredentials();
+    }
+
+    public boolean hasSessionKey() {
+        return _sid != null;
+    }
+
+    public boolean hasToken() {
+        return _token != null;
+    }
+
+    public boolean hasUserCredentials() {
+        return _domain != null && _user != null && _password != null;
+    }
+
     protected void loadFromProperties(Properties properties) {
         if (properties != null) {
             if (properties.containsKey(PROPERTY_SERVER_HOST)) {
@@ -98,26 +134,6 @@ public class ConnectionSettings {
         loadFromProperties(properties);
     }
 
-    public AuthenticationDetails authenticationDetails() {
-        if (_token == null && (_domain == null || _user == null || _password == null)) {
-            return null;
-        } else {
-            if (_token == null) {
-                return new AuthenticationDetails(_app, _domain, _user, _password);
-            } else {
-                return new AuthenticationDetails(_app, _token);
-            }
-        }
-    }
-
-    public String domain() {
-        return _domain;
-    }
-
-    public Boolean encrypt() {
-        return _ssl;
-    }
-
     public String password() {
         return _password;
     }
@@ -142,40 +158,50 @@ public class ConnectionSettings {
         }
     }
 
-    public void setApp(String app) {
+    public String sessionKey() {
+        return _sid;
+    }
+
+    public ConnectionSettings setApp(String app) {
         _app = app;
+        return this;
     }
 
-    public void setDomain(String domain) {
+    public ConnectionSettings setDomain(String domain) {
         _domain = domain;
+        return this;
     }
 
-    public void setPassword(String password) {
+    public ConnectionSettings setPassword(String password) {
         _password = password;
+        return this;
     }
 
-    public void setServer(String host, int port, boolean useHttp, boolean encrypt) {
+    public ConnectionSettings setServer(String host, int port, boolean useHttp, boolean encrypt) {
         _host = host;
         _port = port;
         _http = useHttp;
         _ssl = encrypt;
+        return this;
     }
 
-    public void setServer(String host, int port, String transport) {
+    public ConnectionSettings setServer(String host, int port, String transport) {
         _host = host;
         _port = port;
         setServerTransport(transport);
+        return this;
     }
 
-    public void setServerHost(String host) {
+    public ConnectionSettings setServerHost(String host) {
         _host = host;
+        return this;
     }
 
     public void setServerPort(int port) {
         _port = port;
     }
 
-    public void setServerTransport(String transport) {
+    public ConnectionSettings setServerTransport(String transport) {
         if ("http".equalsIgnoreCase(transport)) {
             _http = true;
             _ssl = false;
@@ -188,6 +214,33 @@ public class ConnectionSettings {
         } else {
             throw new IllegalArgumentException("Invalid transport: " + transport);
         }
+        return this;
+    }
+
+    public ConnectionSettings setSessionKey(String sessionKey) {
+        _sid = sessionKey;
+        return this;
+    }
+
+    public ConnectionSettings setToken(String token) {
+        _token = token;
+        return this;
+    }
+
+    public ConnectionSettings setUser(String user) {
+        _user = user;
+        return this;
+    }
+
+    public ConnectionSettings setUserCredentials(String domain, String user, String password) {
+        _domain = domain;
+        _user = user;
+        _password = password;
+        return this;
+    }
+
+    public String token() {
+        return _token;
     }
 
     public String transport() {
@@ -197,54 +250,12 @@ public class ConnectionSettings {
         return _http ? (_ssl ? "https" : "http") : "tcp/ip";
     }
 
-    public void setUser(String user) {
-        _user = user;
-    }
-
-    public String token() {
-        return _token;
-    }
-
     public Boolean useHttp() {
         return _http;
     }
 
     public String user() {
         return _user;
-    }
-
-    public String sessionKey() {
-        return _sid;
-    }
-
-    public void setSessionKey(String sessionKey) {
-        _sid = sessionKey;
-    }
-
-    public boolean hasSession() {
-        return _sid != null;
-    }
-
-    public boolean hasToken() {
-        return _token != null;
-    }
-
-    public void setUserCredentials(String domain, String user, String password) {
-        _domain = domain;
-        _user = user;
-        _password = password;
-    }
-
-    public void setToken(String token) {
-        _token = token;
-    }
-
-    public boolean hasUserCredentials() {
-        return _domain != null && _user != null && _password != null;
-    }
-
-    public boolean hasAuthenticationDetails() {
-        return hasToken() || hasUserCredentials();
     }
 
     public void validate() throws Throwable {

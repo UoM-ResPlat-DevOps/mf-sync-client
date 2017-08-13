@@ -3,13 +3,13 @@ package vicnode.mf.client.task;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import arc.mf.client.ServerClient;
-import arc.mf.client.ServerClient.Connection;
+import arc.utils.CanAbort;
+import vicnode.mf.client.MFSession;
 import vicnode.mf.client.util.LoggingUtils;
 
 public abstract class AbstractTask implements Task {
 
-    private ServerClient.Connection _cxn;
+    private MFSession _session;
     private State _state;
     private long _workTotal;
     private long _workProgressed;
@@ -17,12 +17,22 @@ public abstract class AbstractTask implements Task {
 
     private Logger _logger;
 
-    protected AbstractTask(ServerClient.Connection cxn, Logger logger) {
-        _cxn = cxn;
+    private CanAbort _ca;
+
+    protected AbstractTask(MFSession session, Logger logger) {
+        _session = session;
         _logger = logger;
         _state = State.PENDING;
         _workTotal = -1;
         _workProgressed = 0;
+    }
+
+    public CanAbort abortableOperation() {
+        return _ca;
+    }
+
+    public void setAbortableOperation(CanAbort ca) {
+        _ca = ca;
     }
 
     @Override
@@ -33,20 +43,28 @@ public abstract class AbstractTask implements Task {
     @Override
     public Void call() throws Exception {
         setState(State.EXECUTING);
-        ServerClient.Connection cxn = connect();
         try {
-            execute(cxn);
+            execute(_session);
             setState(State.COMPLETED);
             return null;
         } catch (Throwable e) {
             setState(State.FAILED);
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+                CanAbort ca = abortableOperation();
+                if (ca != null) {
+                    try {
+                        ca.abort();
+                    } catch (Throwable e1) {
+                        logError("Fail to abort service call.", e1);
+                    }
+                }
+            }
             if (e instanceof Exception) {
                 throw (Exception) e;
             } else {
                 throw new Exception(e);
             }
-        } finally {
-            cxn.closeNe();
         }
     }
 
@@ -87,11 +105,6 @@ public abstract class AbstractTask implements Task {
 
     public final synchronized void setState(State state) {
         _state = state;
-    }
-
-    @Override
-    public Connection connect() {
-        return _cxn;
     }
 
     @Override

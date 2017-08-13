@@ -8,12 +8,10 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
 
-import arc.mf.client.ServerClient;
-import arc.mf.client.ServerClient.Connection;
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
+import vicnode.mf.client.MFSession;
 import vicnode.mf.client.file.PosixAttributes;
-import vicnode.mf.client.util.AssetUtils;
 import vicnode.mf.client.util.LoggingUtils;
 
 public class AssetSyncTaskProducer implements Runnable {
@@ -26,7 +24,7 @@ public class AssetSyncTaskProducer implements Runnable {
 
     private Direction _direction;
 
-    private ServerClient.Connection _cxn;
+    private MFSession _session;
     private Logger _logger;
     private Path _rootDirectory;
     private String _rootNamespace;
@@ -35,17 +33,17 @@ public class AssetSyncTaskProducer implements Runnable {
 
     private int _pageSize;
 
-    public AssetSyncTaskProducer(Connection cxn, Logger logger, Path rootDirectory, String rootNamespace,
+    public AssetSyncTaskProducer(MFSession session, Logger logger, Path rootDirectory, String rootNamespace,
             BlockingQueue<SyncTask> queue) {
-        this(Direction.LOCAL_TO_REMOTE, cxn, logger, rootDirectory, rootNamespace, queue, DEFAULT_PAGE_SIZE);
+        this(Direction.LOCAL_TO_REMOTE, session, logger, rootDirectory, rootNamespace, queue, DEFAULT_PAGE_SIZE);
     }
 
-    public AssetSyncTaskProducer(Direction direction, Connection cxn, Logger logger, Path rootDirectory,
+    public AssetSyncTaskProducer(Direction direction, MFSession session, Logger logger, Path rootDirectory,
             String rootNamespace, BlockingQueue<SyncTask> queue, int pageSize) {
 
         _direction = direction == null ? Direction.LOCAL_TO_REMOTE : direction;
 
-        _cxn = cxn;
+        _session = session;
         _logger = logger;
         _rootDirectory = rootDirectory;
         _rootNamespace = rootNamespace;
@@ -79,7 +77,7 @@ public class AssetSyncTaskProducer implements Runnable {
                 w.add("xpath", new String[] { "ename", "csize" }, "content/size");
                 w.add("xpath", new String[] { "ename", "csum" }, "content/csum");
                 w.add("xpath", new String[] { "ename", "mtime" }, "meta/" + PosixAttributes.DOC_TYPE + "/mtime");
-                XmlDoc.Element re = _cxn.execute("asset.query", w.document());
+                XmlDoc.Element re = _session.execute("asset.query", w.document(), null, null, null);
                 List<XmlDoc.Element> aes = re.elements("asset");
                 if (aes != null) {
                     // check if corresponding files exist
@@ -90,8 +88,8 @@ public class AssetSyncTaskProducer implements Runnable {
                         long assetContentSize = ae.longValue("csize", -1);
                         if (assetContentSize < 0) {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {
-                                _queue.put(
-                                        new AssetDestroyTask(_cxn.duplicate(true), _logger, _rootDirectory, assetPath, _rootNamespace));
+                                _queue.put(new AssetDestroyTask(_session, _logger, _rootDirectory, assetPath,
+                                        _rootNamespace));
                             } else {
                                 LoggingUtils.logInfo(_logger,
                                         "Skipped asset: " + assetPath + "(id=" + assetId + ") No asset content found.");
@@ -101,8 +99,8 @@ public class AssetSyncTaskProducer implements Runnable {
                         long assetPosixMTime = ae.longValue("mtime", -1);
                         if (assetPosixMTime < 0) {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {
-                                _queue.put(
-                                        new AssetDestroyTask(_cxn.duplicate(true), _logger, _rootDirectory, assetPath, _rootNamespace));
+                                _queue.put(new AssetDestroyTask(_session, _logger, _rootDirectory, assetPath,
+                                        _rootNamespace));
                             } else {
                                 LoggingUtils.logInfo(_logger, "Skipped asset: " + assetPath + "(id=" + assetId
                                         + ") No asset meta/" + PosixAttributes.DOC_TYPE + " found.");
@@ -115,15 +113,15 @@ public class AssetSyncTaskProducer implements Runnable {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {
                                 assetsToDelete.add(assetId);
                             } else {
-                                _queue.put(new AssetDownloadTask(_cxn.duplicate(true), _logger, _rootDirectory, assetId,
-                                        assetPath, assetPosixMTime, _rootNamespace));
+                                _queue.put(new AssetDownloadTask(_session, _logger, _rootDirectory, assetId, assetPath,
+                                        assetPosixMTime, _rootNamespace));
                             }
                         } else {
                             if (_direction == Direction.REMOTE_TO_LOCAL) {
                                 PosixAttributes fileAttrs = PosixAttributes.read(file);
                                 if (assetPosixMTime > fileAttrs.mtime()) {
-                                    _queue.put(new AssetDownloadTask(_cxn.duplicate(true), _logger, _rootDirectory,
-                                            assetId, assetPath, assetPosixMTime, _rootNamespace));
+                                    _queue.put(new AssetDownloadTask(_session, _logger, _rootDirectory, assetId,
+                                            assetPath, assetPosixMTime, _rootNamespace));
                                 }
                             }
                         }
@@ -131,7 +129,11 @@ public class AssetSyncTaskProducer implements Runnable {
 
                     // delete assets
                     if (!assetsToDelete.isEmpty()) {
-                        AssetUtils.destroyAssets(_cxn, assetsToDelete, true);
+                        XmlStringWriter w2 = new XmlStringWriter();
+                        for (String assetId : assetsToDelete) {
+                            w.add("id", assetId);
+                        }
+                        _session.execute("asset.soft.destroy", w2.document(), null, null, null);
                     }
                 }
                 completed = re.longValue("cursor/remaining") == 0;
@@ -141,9 +143,8 @@ public class AssetSyncTaskProducer implements Runnable {
                 Thread.currentThread().interrupt();
             }
             LoggingUtils.logError(_logger, e);
-        } finally {
-            _cxn.closeNe();
         }
+
     }
 
 }

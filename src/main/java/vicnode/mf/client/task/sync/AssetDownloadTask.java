@@ -6,17 +6,13 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import arc.mf.client.RequestOptions;
 import arc.mf.client.ServerClient;
-import arc.mf.client.ServerClient.Connection;
 import arc.streams.LongInputStream;
-import arc.utils.AbortableOperationHandler;
-import arc.utils.CanAbort;
 import arc.xml.XmlDoc.Element;
 import arc.xml.XmlStringWriter;
+import vicnode.mf.client.MFSession;
 import vicnode.mf.client.file.PosixAttributes;
 
 public class AssetDownloadTask extends SyncTask {
@@ -27,18 +23,16 @@ public class AssetDownloadTask extends SyncTask {
     private String _assetPath;
     private long _assetPosixMTime;
 
-    private CanAbort _ca;
-
-    public AssetDownloadTask(Connection cxn, Logger logger, Path rootDir, String assetId, String assetPath, long assetPosixMTime,
-            String rootNS) {
-        super(cxn, logger, rootDir, rootNS);
+    public AssetDownloadTask(MFSession session, Logger logger, Path rootDir, String assetId, String assetPath,
+            long assetPosixMTime, String rootNS) {
+        super(session, logger, rootDir, rootNS);
         _assetId = assetId;
         _assetPath = assetPath;
         _assetPosixMTime = assetPosixMTime;
     }
 
     @Override
-    public void execute(Connection cxn) throws Throwable {
+    public void execute(MFSession session) throws Throwable {
 
         Path file = Paths.get(rootDirectory().toString(), relativePath(rootNamespace(), _assetPath));
         boolean fileExists = Files.exists(file);
@@ -55,59 +49,36 @@ public class AssetDownloadTask extends SyncTask {
 
         XmlStringWriter w = new XmlStringWriter();
         w.add("id", _assetId == null ? ("path=" + _assetPath) : _assetId);
-        RequestOptions ro = new RequestOptions();
-        ro.setAbortHandler(new AbortableOperationHandler() {
 
-            public void finished(CanAbort ca) {
-                _ca = null;
-            }
+        setCurrentOperation("Downloading asset: " + (_assetId == null ? _assetPath : _assetId));
+        session.execute("asset.get", w.document(), null, new ServerClient.OutputConsumer() {
 
-            public void started(CanAbort ca) {
-                _ca = ca;
-            }
-        });
-
-        try {
-            setCurrentOperation("Downloading asset: " + (_assetId == null ? _assetPath : _assetId));
-            cxn.executeMultiInput(null, "asset.get", w.document(), null, new ServerClient.OutputConsumer() {
-
-                @Override
-                protected void consume(Element re, LongInputStream in) throws Throwable {
-                    if (workTotal() < 0) {
-                        setWorkTotal(re.longValue("asset/content/size"));
-                    }
+            @Override
+            protected void consume(Element re, LongInputStream in) throws Throwable {
+                if (workTotal() < 0) {
+                    setWorkTotal(re.longValue("asset/content/size"));
+                }
+                try {
+                    OutputStream out = new BufferedOutputStream(new FileOutputStream(file.toFile()));
                     try {
-                        OutputStream out = new BufferedOutputStream(new FileOutputStream(file.toFile()));
-                        try {
-                            byte[] buffer = new byte[BUFFER_SIZE];
-                            int len;
-                            while ((len = in.read(buffer)) != -1) {
-                                out.write(buffer, 0, len);
-                                incWorkProgress(len);
-                                if (Thread.interrupted()) {
-                                    throw new InterruptedException(
-                                            "Aborted downloading asset: " + (_assetId == null ? _assetPath : _assetId));
-                                }
+                        byte[] buffer = new byte[BUFFER_SIZE];
+                        int len;
+                        while ((len = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, len);
+                            incWorkProgress(len);
+                            if (Thread.interrupted()) {
+                                throw new InterruptedException(
+                                        "Aborted downloading asset: " + (_assetId == null ? _assetPath : _assetId));
                             }
-                        } finally {
-                            out.close();
                         }
                     } finally {
-                        in.close();
+                        out.close();
                     }
-                }
-            }, ro);
-        } catch (InterruptedException e) {
-            if (_ca != null) {
-                try {
-                    _ca.abort();
-                } catch (Throwable t2) {
-                    log(Level.WARNING, "Failed to abort service: asset.get", t2);
+                } finally {
+                    in.close();
                 }
             }
-            throw e;
-        }
-
+        }, this);
     }
 
     @Override

@@ -6,20 +6,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import arc.mf.client.RequestOptions;
 import arc.mf.client.ServerClient;
-import arc.mf.client.ServerClient.Connection;
 import arc.streams.StreamCopy.AbortCheck;
-import arc.utils.AbortableOperationHandler;
-import arc.utils.CanAbort;
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
+import vicnode.mf.client.MFSession;
 import vicnode.mf.client.file.PosixAttributes;
-import vicnode.mf.client.util.AssetUtils;
 import vicnode.mf.client.util.PathUtils;
 
 public class FileUploadTask extends SyncTask {
@@ -27,23 +21,25 @@ public class FileUploadTask extends SyncTask {
     private Path _file;
 
     private String _service;
-    private CanAbort _ca;
 
-    public FileUploadTask(Connection cxn, Logger logger, Path file, Path rootDir, String rootNS) {
-        super(cxn, logger, rootDir, rootNS);
+    public FileUploadTask(MFSession session, Logger logger, Path file, Path rootDir, String rootNS) {
+        super(session, logger, rootDir, rootNS);
         _file = file;
     }
 
     @Override
-    public void execute(Connection cxn) throws Throwable {
+    public void execute(MFSession session) throws Throwable {
         PosixAttributes fileAttrs = null;
         String assetPath = PathUtils.join(rootNamespace(), relativePath(rootDirectory(), _file));
         String assetId = null;
-        boolean assetExists = AssetUtils.assetExists(cxn, "path=" + assetPath);
+        // check if asset exists
+        XmlStringWriter w1 = new XmlStringWriter();
+        w1.add("id", "path=" + assetPath);
+        boolean assetExists = session.execute("asset.exists", w1.document(), null, null, this).booleanValue("exists");
         boolean softDestroyed = false;
         if (assetExists) {
             setCurrentOperation("Retrieving metadata of asset: " + assetPath);
-            XmlDoc.Element ae = AssetUtils.getAssetMeta(cxn, "path=" + assetPath);
+            XmlDoc.Element ae = session.execute("asset.get", w1.document(), null, null, this).element("asset");
             softDestroyed = ae.booleanValue("@destroyed", false);
             assetId = ae.value("@id");
             if (ae.elementExists("content") && ae.elementExists("meta/" + PosixAttributes.DOC_TYPE)) {
@@ -63,37 +59,25 @@ public class FileUploadTask extends SyncTask {
                 }
             }
         }
-        XmlStringWriter w = new XmlStringWriter();
+        XmlStringWriter w2 = new XmlStringWriter();
         if (assetExists) {
             _service = "asset.set";
-            w.add("id", assetId == null ? ("path=" + assetPath) : assetId);
-            w.push("meta", new String[] { "action", "replace" });
+            w2.add("id", assetId == null ? ("path=" + assetPath) : assetId);
+            w2.push("meta", new String[] { "action", "replace" });
         } else {
             _service = "asset.create";
             String assetNamespace = PathUtils.getParentPath(assetPath);
             String assetName = PathUtils.getLastComponent(assetPath);
-            w.add("namespace", new String[] { "create", "true" }, assetNamespace);
-            w.add("name", assetName);
-            w.push("meta");
+            w2.add("namespace", new String[] { "create", "true" }, assetNamespace);
+            w2.add("name", assetName);
+            w2.push("meta");
         }
 
         if (fileAttrs == null) {
             fileAttrs = PosixAttributes.read(_file);
         }
-        fileAttrs.save(w);
-        w.pop();
-        RequestOptions ro = new RequestOptions();
-        ro.setAbortHandler(new AbortableOperationHandler() {
-
-            public void finished(CanAbort ca) {
-                _ca = null;
-            }
-
-            public void started(CanAbort ca) {
-                _ca = ca;
-            }
-
-        });
+        fileAttrs.save(w2);
+        w2.pop();
         String fileExt = PathUtils.getFileExtension(_file.toString());
         ServerClient.Input input = new ServerClient.GeneratedInput(null, fileExt, _file.toString(), workTotal()) {
             @Override
@@ -118,30 +102,18 @@ public class FileUploadTask extends SyncTask {
                 }
             }
         };
-        try {
-            setCurrentOperation("Uploading file: " + _file + " (" + (assetExists ? "Updating" : "Creating") + " asset: "
-                    + assetPath + ")");
-            logInfo("Uploading file: '" + _file + "' to asset: '" + (assetId == null ? assetPath : assetId) + "'");
-            XmlDoc.Element re = cxn.executeMultiInput(null, _service, w.document(), Arrays.asList(input), null, ro);
-            if (re.elementExists("id")) {
-                assetId = re.value("id");
-            }
-            if (softDestroyed) {
-                XmlStringWriter w2 = new XmlStringWriter();
-                w2.add("id", assetId == null ? ("path=" + assetPath) : assetId);
-                cxn.execute("asset.soft.undestroy", "<id>" + assetId + "</id>");
-            }
-        } catch (InterruptedException e) {
-            if (_ca != null) {
-                try {
-                    _ca.abort();
-                } catch (Throwable t2) {
-                    log(Level.WARNING, "Failed to abort service: " + _service, t2);
-                }
-            }
-            throw e;
+        setCurrentOperation("Uploading file: " + _file + " (" + (assetExists ? "Updating" : "Creating") + " asset: "
+                + assetPath + ")");
+        logInfo("Uploading file: '" + _file + "' to asset: '" + (assetId == null ? assetPath : assetId) + "'");
+        XmlDoc.Element re = session.execute(_service, w2.document(), input, null, this);
+        if (re.elementExists("id")) {
+            assetId = re.value("id");
         }
-
+        if (softDestroyed) {
+            XmlStringWriter w3 = new XmlStringWriter();
+            w3.add("id", assetId == null ? ("path=" + assetPath) : assetId);
+            session.execute("asset.soft.undestroy", w3.document(), null, null, this);
+        }
     }
 
     @Override

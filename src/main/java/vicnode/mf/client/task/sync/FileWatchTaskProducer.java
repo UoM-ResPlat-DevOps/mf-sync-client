@@ -22,11 +22,11 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Logger;
 
-import arc.mf.client.ServerClient;
-import arc.mf.client.ServerClient.Connection;
+import arc.utils.CanAbort;
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
-import vicnode.mf.client.util.AssetNamespaceUtils;
+import vicnode.mf.client.MFSession;
+import vicnode.mf.client.util.HasAbortableOperation;
 import vicnode.mf.client.util.LoggingUtils;
 import vicnode.mf.client.util.PathUtils;
 
@@ -37,9 +37,9 @@ import vicnode.mf.client.util.PathUtils;
  *         https://docs.oracle.com/javase/tutorial/displayCode.html?code=https://docs.oracle.com/javase/tutorial/essential/io/examples/WatchDir.java
  *
  */
-public class FileWatchTaskProducer implements Runnable {
+public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
 
-    private ServerClient.Connection _cxn;
+    private MFSession _session;
     private Logger _logger;
     private Path _rootDirectory;
     private String _rootNamespace;
@@ -48,9 +48,11 @@ public class FileWatchTaskProducer implements Runnable {
     private WatchService _watcher;
     private Map<WatchKey, Path> _watchKeys;
 
-    public FileWatchTaskProducer(Connection cxn, Logger logger, Path rootDirectory, String rootNamespace,
+    private CanAbort _ca;
+
+    public FileWatchTaskProducer(MFSession session, Logger logger, Path rootDirectory, String rootNamespace,
             BlockingQueue<SyncTask> queue) throws IOException {
-        _cxn = cxn;
+        _session = session;
         _logger = logger;
         _rootDirectory = rootDirectory;
         _rootNamespace = rootNamespace;
@@ -115,7 +117,7 @@ public class FileWatchTaskProducer implements Runnable {
             LoggingUtils.logInfo(_logger, String.format("Processing event: %s: %s", ev.kind().name(), child));
 
             if (kind == ENTRY_DELETE) {
-                SimpleEntry<Boolean, Boolean> exists = exists(_cxn,
+                SimpleEntry<Boolean, Boolean> exists = exists(_session,
                         PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)));
                 boolean namespaceExists = exists.getKey();
                 if (namespaceExists) {
@@ -123,11 +125,11 @@ public class FileWatchTaskProducer implements Runnable {
                     final String namespace = PathUtils.join(_rootNamespace,
                             SyncTask.relativePath(_rootDirectory, child));
                     LoggingUtils.logInfo(_logger, "Destroying namespace: '" + namespace + "'");
-                    AssetNamespaceUtils.softDestroyAllAssets(_cxn, namespace);
+                    softDestroyAllAssets(_session, namespace);
                 }
                 boolean assetExists = exists.getValue();
                 if (assetExists) {
-                    _queue.put(new AssetDestroyTask(_cxn, _logger, child, _rootDirectory, _rootNamespace));
+                    _queue.put(new AssetDestroyTask(_session, _logger, child, _rootDirectory, _rootNamespace));
                 }
             } else {
                 boolean isDirectory = Files.isDirectory(child, NOFOLLOW_LINKS);
@@ -148,17 +150,17 @@ public class FileWatchTaskProducer implements Runnable {
                         // upload the directory (It may be empty if the event
                         // was triggered by mkdir; Otherwise it may contains
                         // files if the event was triggered by mv)
-                        new FileSyncTaskProducer(_cxn, _logger, child,
+                        new FileSyncTaskProducer(_session, _logger, child,
                                 PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)), _queue)
                                         .execute();
                     } else if (isRegularFile) {
-                        _queue.put(new FileUploadTask(_cxn, _logger, child, _rootDirectory, _rootNamespace));
+                        _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
                     }
                 } else if (kind == ENTRY_MODIFY) {
                     if (isDirectory) {
                         // TODO
                     } else if (isRegularFile) {
-                        _queue.put(new FileUploadTask(_cxn, _logger, child, _rootDirectory, _rootNamespace));
+                        _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
                     }
                 }
             }
@@ -197,7 +199,7 @@ public class FileWatchTaskProducer implements Runnable {
         }
     }
 
-    private static SimpleEntry<Boolean, Boolean> exists(ServerClient.Connection cxn, String path) throws Throwable {
+    private SimpleEntry<Boolean, Boolean> exists(MFSession session, String path) throws Throwable {
         XmlStringWriter w = new XmlStringWriter();
         w.push("service", new String[] { "name", "asset.namespace.exists" });
         w.add("namespace", path);
@@ -205,10 +207,28 @@ public class FileWatchTaskProducer implements Runnable {
         w.push("service", new String[] { "name", "asset.exists" });
         w.add("id", "path=" + path);
         w.pop();
-        XmlDoc.Element re = cxn.execute("service.execute", w.document());
+        XmlDoc.Element re = session.execute("service.execute", w.document(), null, null, this);
         return new SimpleEntry<Boolean, Boolean>(
                 re.booleanValue("reply[@service='asset.namespace.exists']/response/exists"),
                 re.booleanValue("reply[@service='asset.exists']/response/exists"));
+    }
+
+    private void softDestroyAllAssets(MFSession session, String namespace) throws Throwable {
+        XmlStringWriter w = new XmlStringWriter();
+        w.add("where", "namespace>='" + namespace + "'");
+        w.add("action", "pipe");
+        w.add("service", new String[] { "name", "asset.soft.destroy" });
+        _session.execute("asset.query", w.document(), null, null, this);
+    }
+
+    @Override
+    public void setAbortableOperation(CanAbort ca) {
+        _ca = ca;
+    }
+
+    @Override
+    public CanAbort abortableOperation() {
+        return _ca;
     }
 
 }

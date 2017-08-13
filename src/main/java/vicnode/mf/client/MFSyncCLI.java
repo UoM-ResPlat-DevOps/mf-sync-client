@@ -81,6 +81,12 @@ public class MFSyncCLI {
                 } else if (args[i].equals("--watch")) {
                     settings.setWatch(true);
                     i++;
+                } else if (args[i].equals("--create.directory")) {
+                    settings.setCreateDirectory(true);
+                    i++;
+                } else if (args[i].equals("--create.namespace")) {
+                    settings.setCreateNamespace(true);
+                    i++;
                 } else if (args[i].equals("--log.dir")) {
                     Path logDir = Paths.get(args[i + 1]);
                     if (Files.exists(logDir) && Files.isDirectory(logDir)) {
@@ -112,8 +118,7 @@ public class MFSyncCLI {
             System.exit(1);
         }
 
-        final MFSync sync = new MFSync(settings, settings.directory(), settings.namespace(), settings.numberOfThreads(),
-                settings.watch(), settings.logDirectory());
+        final MFSync sync = new MFSync(settings);
         if (settings.watch()) {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 
@@ -150,10 +155,13 @@ public class MFSyncCLI {
         System.out.println("Switches:");        
         System.out.println("    --help                               Display help information.");
         System.out.println("    --watch                              Start a daemon to watch the changes in the specified directory.");
+        System.out.println("    --create.directory                   Create directory if it does not exist.");
+        System.out.println("    --create.namespace                   Create asset namespace if it does not exist.");
+
         System.out.println();
         System.out.println("Arguments:");        
-        System.out.println("    <local-directory>                    The local directory to upload/synchronize from.");
-        System.out.println("    <remote-asset-namespace>             The remote asset namespace to upload/synchroniz to.");
+        System.out.println("    <directory>                          The local directory to upload/synchronize from.");
+        System.out.println("    <asset-namespace>                    The remote asset namespace to upload/synchroniz to.");
         System.out.println();
         // @formatter:on
     }

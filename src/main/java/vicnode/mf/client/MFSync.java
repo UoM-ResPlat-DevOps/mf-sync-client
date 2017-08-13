@@ -1,6 +1,7 @@
 package vicnode.mf.client;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -18,15 +19,13 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import arc.mf.client.RemoteServer;
-import arc.mf.client.ServerClient;
+import arc.xml.XmlStringWriter;
 import vicnode.mf.client.task.sync.AssetSyncTaskProducer;
 import vicnode.mf.client.task.sync.FileSyncTaskProducer;
 import vicnode.mf.client.task.sync.FileWatchTaskProducer;
 import vicnode.mf.client.task.sync.PoisonTask;
 import vicnode.mf.client.task.sync.SyncTask;
 import vicnode.mf.client.task.sync.TaskConsumer;
-import vicnode.mf.client.util.AssetNamespaceUtils;
 import vicnode.mf.client.util.LoggingUtils;
 import vicnode.mf.client.util.ThrowableUtils;
 
@@ -47,9 +46,11 @@ public class MFSync implements Runnable {
 
     public static final String DEFAULT_LOG_DIR = System.getProperty("user.dir");
 
-    private ConnectionSettings _connectionSettings;
-    private Path _rootDirectory;
-    private String _rootNamespace;
+    private MFSession _session;
+    private Path _directory;
+    private boolean _createDirectoryIfNotExists;
+    private String _namespace;
+    private boolean _createNamespaceIfNotExists;
 
     private Logger _logger;
 
@@ -61,17 +62,21 @@ public class MFSync implements Runnable {
     private ExecutorService _consumerThreadPool;
     private List<TaskConsumer> _consumers;
 
-    private RemoteServer _rs;
-    private ServerClient.Connection _cxn;
-
     private boolean _watch;
 
-    public MFSync(ConnectionSettings connectionSettings, Path rootDirectory, String rootNamespace, int nbConsumers,
-            boolean watch, Path logDir) {
-        _connectionSettings = connectionSettings;
-        _connectionSettings.setApp(APP_NAME);
-        _rootDirectory = rootDirectory;
-        _rootNamespace = rootNamespace;
+    public MFSync(MFSyncSettings settings) {
+        this(new MFSession(settings.setApp(APP_NAME)), settings.directory(), settings.createDirectory(),
+                settings.namespace(), settings.createNamespace(), settings.numberOfThreads(), settings.watch(),
+                settings.logDirectory());
+    }
+
+    public MFSync(MFSession session, Path directory, boolean createDirectoryIfNotExists, String namespace,
+            boolean createNamespaceIfNotExists, int nbConsumers, boolean watch, Path logDir) {
+        _session = session;
+        _directory = directory;
+        _createDirectoryIfNotExists = createDirectoryIfNotExists;
+        _namespace = namespace;
+        _createNamespaceIfNotExists = createNamespaceIfNotExists;
 
         _logger = createLogger(logDir == null ? DEFAULT_LOG_DIR : logDir.toString(), APP_NAME);
 
@@ -98,51 +103,50 @@ public class MFSync implements Runnable {
 
     }
 
-    private void connect() throws Throwable {
-        if (_rs == null) {
-            _rs = new RemoteServer(_connectionSettings.serverHost(), _connectionSettings.serverPort(),
-                    _connectionSettings.useHttp(), _connectionSettings.encrypt());
-            _rs.setConnectionPooling(true);
-        }
-        if (_cxn == null) {
-            _cxn = _rs.open();
-        }
-        if (!_cxn.hasSession()) {
-            _cxn.connect(_connectionSettings.authenticationDetails());
-        }
-    }
-
     @Override
     public void run() {
         try {
             /*
-             * Connect to Mediaflux server
+             * check if directory exists
              */
-            connect();
+            if (!Files.exists(_directory)) {
+                if (_createDirectoryIfNotExists) {
+                    Files.createDirectory(_directory);
+                } else {
+                    throw new IllegalArgumentException("Directory: '" + _directory + "' does not exist.");
+                }
+            }
 
             /*
-             * check if the remote namespace exists.
+             * check if namespace exists
              */
-            if (!AssetNamespaceUtils.namespaceExists(_cxn, _rootNamespace)) {
-                throw new IllegalArgumentException("Asset namespace: '" + _rootNamespace + "' does not exist.");
+            XmlStringWriter w = new XmlStringWriter();
+            w.add("namespace", _namespace);
+            boolean namespaceExists = _session.execute("asset.namespace.exists", w.document(), null, null, null)
+                    .booleanValue("exists");
+            if (!namespaceExists) {
+                if (_createNamespaceIfNotExists) {
+                    LoggingUtils.logInfo(_logger, "Creating asset namespace: '" + _namespace + "'");
+                    _session.execute("asset.namespace.create", w.document(), null, null, null);
+                } else {
+                    throw new IllegalArgumentException("Asset namespace: '" + _namespace + "' does not exist.");
+                }
             }
 
             LoggingUtils.logInfo(_logger,
-                    "Syncing from directory: '" + _rootDirectory + "' to asset namespace: '" + _rootNamespace + "'");
+                    "Syncing from directory: '" + _directory + "' to asset namespace: '" + _namespace + "'");
 
             /*
              * Run FileSyncTaskProducer: go through the files in the local
              * directory, and upload them to the remote asset namespace.
              */
-            _producerThreadPool.submit(
-                    new FileSyncTaskProducer(_cxn.duplicate(true), _logger, _rootDirectory, _rootNamespace, _queue));
+            _producerThreadPool.submit(new FileSyncTaskProducer(_session, _logger, _directory, _namespace, _queue));
 
             /*
              * Run AssetSyncTaskProducer: go through the assets in the remote
              * asset namespace, and delete the assets do not exist locally
              */
-            _producerThreadPool.submit(
-                    new AssetSyncTaskProducer(_cxn.duplicate(true), _logger, _rootDirectory, _rootNamespace, _queue));
+            _producerThreadPool.submit(new AssetSyncTaskProducer(_session, _logger, _directory, _namespace, _queue));
 
             /*
              * Start consumer threads.
@@ -160,7 +164,7 @@ public class MFSync implements Runnable {
              */
             if (_watch) {
                 _producerThreadPool
-                        .submit(new FileWatchTaskProducer(_cxn.duplicate(true), _logger, _rootDirectory, _rootNamespace, _queue));
+                        .submit(new FileWatchTaskProducer(_session, _logger, _directory, _namespace, _queue));
             } else {
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -171,10 +175,7 @@ public class MFSync implements Runnable {
             }
 
         } catch (Throwable e) {
-            e.printStackTrace(System.err);
-            if (_cxn != null) {
-                _cxn.closeNe();
-            }
+            LoggingUtils.logError(_logger, e);
         }
     }
 
@@ -183,10 +184,10 @@ public class MFSync implements Runnable {
     }
 
     public void stop() {
-        if (_consumerThreadPool != null && _consumerThreadPool.isShutdown()) {
+        if (_consumerThreadPool != null && !_consumerThreadPool.isTerminated()) {
             _consumerThreadPool.shutdownNow();
         }
-        if (_producerThreadPool != null && _producerThreadPool.isShutdown()) {
+        if (_producerThreadPool != null && !_producerThreadPool.isTerminated()) {
             _producerThreadPool.shutdownNow();
         }
     }
