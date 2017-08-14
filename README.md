@@ -64,8 +64,41 @@ kill -15 <pid>
  
  ### Sample config file
  ```
- 
+ # Mediaflux server host
+mf.host=mediaflux.your-organization.org
+
+# Mediaflux server port
+mf.port=443
+
+# Mediaflux server transport protocol, can be http, https or tcp/ip.
+mf.transport=https
+
+# Mediaflux authentication details 
+#mf.auth=domain,user,password
+
+# Mediaflux secure identity token
+mf.token=XXXXXXXXXXXXXXXXX
+
+# Number of worker threads
+threads=1
+
+# Watch the changes of the specified (Run as daemon)
+watch=true
+
+# Source directory
+directory=/path/to/src-directory
+
+# Create directory if not exist
+create.directory=false
+
+# Destination namespace
+namespace=/path/to/dst-namespace
+
+# Create namespace if not exist
+create.namespace=false
+
+# Directory to save the logs, defaults to currrent working directory.
+#log.dir=/path/to/logs/
+
  ```
 
-
-### config file
