@@ -6,7 +6,7 @@ A client application to upload local files to Mediaflux server
 
 ### mf-sync
 
-'''
+```
 USAGE:
     mf-sync [options] <directory> <asset-namespace>
 
@@ -31,7 +31,7 @@ OPTIONS:
 POSITIONAL ARGUMENTS:
     <directory>                          The local directory to upload/synchronize from.
     <asset-namespace>                    The remote asset namespace to upload/synchronize to.
-'''
+```
 
 ### mf-sync-daemon
 
