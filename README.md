@@ -73,7 +73,7 @@ mf.port=443
 # Mediaflux server transport protocol, can be http, https or tcp/ip.
 mf.transport=https
 
-# Mediaflux authentication details 
+# Mediaflux user credentials. If not specified, mf.token must be present.
 #mf.auth=domain,user,password
 
 # Mediaflux secure identity token
