@@ -5,7 +5,7 @@ A client application to upload local files to Mediaflux server.
 
   1. Download latest release from: []()
   2. Unzip it.
-    * ```cd opt; unzip ~/Downloads/mf-sync-client-x.x.x.zip```
+    * ```cd opt; sudo unzip ~/Downloads/mf-sync-client-x.x.x.zip```
 
 ## II. Tools
 
@@ -63,7 +63,7 @@ kill -15 <pid>
     3. load settings in the command arguments;
  
  ### Sample config file
- ```bash
+ ```shell
  # Mediaflux server host
 mf.host=mediaflux.your-organization.org
 
