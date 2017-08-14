@@ -5,6 +5,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
+import vicnode.mf.client.util.PathUtils;
+
 public class MFSyncSettings extends ConnectionSettings {
 
     public static final String PROPERTY_DIRECTORY = "directory";
@@ -140,6 +142,17 @@ public class MFSyncSettings extends ConnectionSettings {
         }
         if (_namespace == null) {
             throw new IllegalArgumentException("Missing namespace argument.");
+        }
+        if (_watch) {
+            Path logDir = _logDir == null ? MFSync.DEFAULT_LOG_DIR : _logDir;
+            if (Files.isSameFile(logDir, _directory)) {
+                throw new IllegalArgumentException("log.dir='" + logDir
+                        + "' is the same as source directory. This will cause uploading log file infinitely. Change --log.dir to different location to resolve the issue.");
+            }
+            if (PathUtils.isOrIsDescendant(_logDir, _directory)) {
+                throw new IllegalArgumentException("log.dir='" + logDir
+                        + "' is contained by the source directory. This will cause uploading log file infinitely. Change --log.dir to different location to resolve the issue.");
+            }
         }
     }
 

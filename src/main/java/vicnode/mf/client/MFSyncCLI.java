@@ -161,7 +161,7 @@ public class MFSyncCLI {
         System.out.println();
         System.out.println("Arguments:");        
         System.out.println("    <directory>                          The local directory to upload/synchronize from.");
-        System.out.println("    <asset-namespace>                    The remote asset namespace to upload/synchroniz to.");
+        System.out.println("    <asset-namespace>                    The remote asset namespace to upload/synchronize to.");
         System.out.println();
         // @formatter:on
     }

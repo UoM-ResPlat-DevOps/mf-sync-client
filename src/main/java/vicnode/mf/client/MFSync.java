@@ -3,6 +3,7 @@ package vicnode.mf.client;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -20,6 +21,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import arc.xml.XmlStringWriter;
+import vicnode.mf.client.file.Filter;
 import vicnode.mf.client.task.sync.AssetSyncTaskProducer;
 import vicnode.mf.client.task.sync.FileSyncTaskProducer;
 import vicnode.mf.client.task.sync.FileWatchTaskProducer;
@@ -44,7 +46,7 @@ public class MFSync implements Runnable {
     public static final boolean IS_WINDOWS = System.getProperty("os.name", "generic").toLowerCase()
             .indexOf("windows") >= 0;
 
-    public static final String DEFAULT_LOG_DIR = System.getProperty("user.dir");
+    public static final Path DEFAULT_LOG_DIR = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
 
     private MFSession _session;
     private Path _directory;
@@ -52,6 +54,7 @@ public class MFSync implements Runnable {
     private String _namespace;
     private boolean _createNamespaceIfNotExists;
 
+    private Path _logDir;
     private Logger _logger;
 
     private BlockingQueue<SyncTask> _queue;
@@ -78,7 +81,8 @@ public class MFSync implements Runnable {
         _namespace = namespace;
         _createNamespaceIfNotExists = createNamespaceIfNotExists;
 
-        _logger = createLogger(logDir == null ? DEFAULT_LOG_DIR : logDir.toString(), APP_NAME);
+        _logDir = logDir == null ? DEFAULT_LOG_DIR : logDir.toAbsolutePath();
+        _logger = createLogger(_logDir, APP_NAME);
 
         _queue = new LinkedBlockingQueue<SyncTask>();
 
@@ -136,11 +140,34 @@ public class MFSync implements Runnable {
             LoggingUtils.logInfo(_logger,
                     "Syncing from directory: '" + _directory + "' to asset namespace: '" + _namespace + "'");
 
+            Filter logFileFilter = new Filter() {
+
+                @Override
+                public boolean acceptFile(Path file) {
+                    String path = file.toAbsolutePath().toString();
+                    String logFilePrefix = logFilePrefix();
+                    boolean exclude = path.startsWith(logFilePrefix + ".")
+                            && (path.endsWith(".log") || path.endsWith(".log.lck"));
+                    if (exclude) {
+                        // skip log file.
+                        return false;
+                    } else {
+                        return true;
+                    }
+                }
+
+                @Override
+                public boolean acceptDirectory(Path dir) {
+                    return true;
+                }
+            };
+
             /*
              * Run FileSyncTaskProducer: go through the files in the local
              * directory, and upload them to the remote asset namespace.
              */
-            _producerThreadPool.submit(new FileSyncTaskProducer(_session, _logger, _directory, _namespace, _queue));
+            _producerThreadPool.submit(new FileSyncTaskProducer(_session, _logger, _directory, _namespace, _queue)
+                    .setFilter(logFileFilter));
 
             /*
              * Run AssetSyncTaskProducer: go through the assets in the remote
@@ -163,8 +190,8 @@ public class MFSync implements Runnable {
              * asset namespace...
              */
             if (_watch) {
-                _producerThreadPool
-                        .submit(new FileWatchTaskProducer(_session, _logger, _directory, _namespace, _queue));
+                _producerThreadPool.submit(new FileWatchTaskProducer(_session, _logger, _directory, _namespace, _queue)
+                        .setFilter(logFileFilter));
             } else {
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -192,6 +219,10 @@ public class MFSync implements Runnable {
         }
     }
 
+    protected String logFilePrefix() {
+        return Paths.get(_logDir.toString(), APP_NAME).toString();
+    }
+
     public void log(Level level, String message, Throwable thrown) {
         LoggingUtils.log(_logger, level, message, thrown);
     }
@@ -216,7 +247,7 @@ public class MFSync implements Runnable {
         log(Level.SEVERE, message, null);
     }
 
-    static Logger createLogger(String dir, String logName) {
+    static Logger createLogger(Path dir, String logName) {
 
         try {
             Logger logger = Logger.getLogger(logName);
@@ -226,7 +257,7 @@ public class MFSync implements Runnable {
             /*
              * add file handler
              */
-            String logFileNamePattern = dir + File.separatorChar + logName + "." + "%g.log";
+            String logFileNamePattern = dir.toString() + File.separatorChar + logName + "." + "%g.log";
             FileHandler fileHandler = new FileHandler(logFileNamePattern, LOG_FILE_SIZE_LIMIT, LOG_FILE_COUNT, true);
             fileHandler.setFormatter(new Formatter() {
                 @Override

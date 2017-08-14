@@ -11,6 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import vicnode.mf.client.MFSession;
+import vicnode.mf.client.file.Filter;
 import vicnode.mf.client.util.LoggingUtils;
 
 public class FileSyncTaskProducer implements Runnable {
@@ -18,6 +19,8 @@ public class FileSyncTaskProducer implements Runnable {
     private MFSession _session;
     private Logger _logger;
     private BlockingQueue<SyncTask> _queue;
+
+    private Filter _filter;
 
     private Path _rootDirectory;
     private String _rootNamespace;
@@ -40,12 +43,19 @@ public class FileSyncTaskProducer implements Runnable {
         }
     }
 
+    public FileSyncTaskProducer setFilter(Filter filter) {
+        _filter = filter;
+        return this;
+    }
+
     protected void execute() throws Throwable {
         Files.walkFileTree(_rootDirectory, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 try {
-                    _queue.put(new FileUploadTask(_session, _logger, file, _rootDirectory, _rootNamespace));
+                    if (_filter == null || _filter.acceptFile(file)) {
+                        _queue.put(new FileUploadTask(_session, _logger, file, _rootDirectory, _rootNamespace));
+                    }
                 } catch (Throwable e) {
                     if (e instanceof InterruptedException) {
                         Thread.currentThread().interrupt();
@@ -67,7 +77,11 @@ public class FileSyncTaskProducer implements Runnable {
                 if (ioe != null) {
                     LoggingUtils.log(_logger, Level.SEVERE, ioe.getMessage(), ioe);
                 }
-                return FileVisitResult.CONTINUE;
+                if (_filter == null || _filter.acceptDirectory(dir)) {
+                    return FileVisitResult.CONTINUE;
+                } else {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
             }
         });
     }

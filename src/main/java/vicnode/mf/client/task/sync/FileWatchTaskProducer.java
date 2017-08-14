@@ -26,6 +26,7 @@ import arc.utils.CanAbort;
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
 import vicnode.mf.client.MFSession;
+import vicnode.mf.client.file.Filter;
 import vicnode.mf.client.util.HasAbortableOperation;
 import vicnode.mf.client.util.LoggingUtils;
 import vicnode.mf.client.util.PathUtils;
@@ -49,6 +50,8 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
     private Map<WatchKey, Path> _watchKeys;
 
     private CanAbort _ca;
+
+    private Filter _filter;
 
     public FileWatchTaskProducer(MFSession session, Logger logger, Path rootDirectory, String rootNamespace,
             BlockingQueue<SyncTask> queue) throws IOException {
@@ -113,8 +116,15 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             Path name = ev.context();
             Path child = dir.resolve(name);
 
+            boolean isDirectory = Files.isDirectory(child, NOFOLLOW_LINKS);
+            boolean isRegularFile = Files.isRegularFile(child, NOFOLLOW_LINKS);
+
             // log event
-            LoggingUtils.logInfo(_logger, String.format("Processing event: %s: %s", ev.kind().name(), child));
+            if (_filter != null && isRegularFile && !_filter.acceptFile(child)) {
+                // DO not log it.
+            } else {
+                LoggingUtils.logInfo(_logger, String.format("Processing event: %s: %s", ev.kind().name(), child));
+            }
 
             if (kind == ENTRY_DELETE) {
                 SimpleEntry<Boolean, Boolean> exists = exists(_session,
@@ -132,8 +142,6 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                     _queue.put(new AssetDestroyTask(_session, _logger, child, _rootDirectory, _rootNamespace));
                 }
             } else {
-                boolean isDirectory = Files.isDirectory(child, NOFOLLOW_LINKS);
-                boolean isRegularFile = Files.isRegularFile(child, NOFOLLOW_LINKS);
                 if (!isDirectory && !isRegularFile) {
                     LoggingUtils.logInfo(_logger, "Skipped: " + child + ". Not a directory or regular file.");
                     continue;
@@ -150,21 +158,32 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                         // upload the directory (It may be empty if the event
                         // was triggered by mkdir; Otherwise it may contains
                         // files if the event was triggered by mv)
-                        new FileSyncTaskProducer(_session, _logger, child,
-                                PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)), _queue)
-                                        .execute();
+                        if (_filter == null || _filter.acceptDirectory(child)) {
+                            new FileSyncTaskProducer(_session, _logger, child,
+                                    PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)),
+                                    _queue).execute();
+                        }
                     } else if (isRegularFile) {
-                        _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
+                        if (_filter == null || _filter.acceptFile(child)) {
+                            _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
+                        }
                     }
                 } else if (kind == ENTRY_MODIFY) {
                     if (isDirectory) {
                         // TODO
                     } else if (isRegularFile) {
-                        _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
+                        if (_filter == null || _filter.acceptFile(child)) {
+                            _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
+                        }
                     }
                 }
             }
         }
+    }
+
+    public FileWatchTaskProducer setFilter(Filter filter) {
+        _filter = filter;
+        return this;
     }
 
     @Override
