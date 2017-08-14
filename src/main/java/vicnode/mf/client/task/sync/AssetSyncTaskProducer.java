@@ -131,7 +131,7 @@ public class AssetSyncTaskProducer implements Runnable {
                     if (!assetsToDelete.isEmpty()) {
                         XmlStringWriter w2 = new XmlStringWriter();
                         for (String assetId : assetsToDelete) {
-                            w.add("id", assetId);
+                            w2.add("id", assetId);
                         }
                         _session.execute("asset.soft.destroy", w2.document(), null, null, null);
                     }
