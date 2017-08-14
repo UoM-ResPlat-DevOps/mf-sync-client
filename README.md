@@ -52,7 +52,7 @@ Additionally, it returns the **pid** (process id). To stop the daemon by **pid**
 kill -15 <pid>
 ```
 
-## Configuration
+## III. Configuration
 
   * The default config file location is *$HOME/.mediaflux/mf-sync.properties*
   * You can also specify --conf <config-file> to override it.
@@ -63,7 +63,7 @@ kill -15 <pid>
     3. load settings in the command arguments;
  
  ### Sample config file
- ```
+ ```bash
  # Mediaflux server host
 mf.host=mediaflux.your-organization.org
 
