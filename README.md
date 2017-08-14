@@ -3,8 +3,8 @@ A client application to upload local files to Mediaflux server.
 
 ## I. Installation
 
-  1. Download latest release from: []()
-  2. Unzip it.
+  1. Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
+  2. Unzip it to the destination directory:
     * ```cd opt; sudo unzip ~/Downloads/mf-sync-client-x.x.x.zip```
 
 ## II. Tools
@@ -101,4 +101,6 @@ create.namespace=false
 #log.dir=/path/to/logs/
 
  ```
+
+## IV. Limitations
 
