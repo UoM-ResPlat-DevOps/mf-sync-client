@@ -2,7 +2,7 @@
 A client application to upload local files to Mediaflux server
 
 
-## Commands
+## II. Commands
 
 ### mf-sync
 
@@ -34,6 +34,12 @@ POSITIONAL ARGUMENTS:
 ```
 
 ### mf-sync-daemon
+
+mf-sync-daemon is a wrapper shell script to run the mf-sync tool as daemon to monitor the changes in the specified directory. It is equivalent to:
+
+```
+mf-sync --watch [options] <directory> <asset-namespace>
+```
 
 ## Configuration
 
