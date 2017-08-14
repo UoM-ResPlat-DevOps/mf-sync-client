@@ -137,29 +137,28 @@ public class MFSyncCLI {
     private static void printUsage() {
         // @formatter:off
         System.out.println();
-        System.out.println("Usage: " + MFSync.APP_NAME + " [--help] --mf.host <host> --mf.port <port> --mf.transport <transport> [--mf.token <token>|--mf.auth <domain,user,password>|--mf.sid <sid>] <local-directory> <remote-asset-namespace>");
+        System.out.println("USAGE:");
+        System.out.println("    "+ MFSync.APP_NAME + " [options] <directory> <asset-namespace>");
         System.out.println();
-        System.out.println("Options:");
+        System.out.println("DESCRIPTION:");
+        System.out.println("    " + MFSync.APP_NAME + " is file uploading tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.");
+        System.out.println();
+        System.out.println("OPTIONS:");
+        System.out.println("    --help                               Display help information.");
         System.out.println("    --mf.host <host>                     The Mediaflux server host.");
         System.out.println("    --mf.port <port>                     The Mediaflux server port.");
         System.out.println("    --mf.transport <transport>           The Mediaflux server transport, can be http, https or tcp/ip.");
         System.out.println("    --mf.auth <domain,user,password>     The Mediaflux user authentication deatils.");
         System.out.println("    --mf.token <token>                   The Mediaflux secure identity token.");
         System.out.println("    --mf.sid <sid>                       The Mediaflux session id.");
-        System.out.println("    --threads <n>                        Number of worker threads to upload the files. Defaults to 1.");
-        System.out.println("    --log.dir <logging-directory>        The directory to save the logs. Defaults to current work directory.");
-        System.out.println("    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings defined in the configuration file can be overridden by the command arguments.");
-        
-        
-        System.out.println();
-        System.out.println("Switches:");        
-        System.out.println("    --help                               Display help information.");
         System.out.println("    --watch                              Start a daemon to watch the changes in the specified directory.");
         System.out.println("    --create.directory                   Create directory if it does not exist.");
         System.out.println("    --create.namespace                   Create asset namespace if it does not exist.");
-
+        System.out.println("    --threads <n>                        Number of worker threads to upload the files. Defaults to 1.");
+        System.out.println("    --log.dir <logging-directory>        The directory to save the logs. Defaults to current work directory.");
+        System.out.println("    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.");
         System.out.println();
-        System.out.println("Arguments:");        
+        System.out.println("POSITIONAL ARGUMENTS:");        
         System.out.println("    <directory>                          The local directory to upload/synchronize from.");
         System.out.println("    <asset-namespace>                    The remote asset namespace to upload/synchronize to.");
         System.out.println();
