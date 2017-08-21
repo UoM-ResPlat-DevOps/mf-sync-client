@@ -90,4 +90,15 @@ public class MFSession {
         }
     }
 
+    public XmlDoc.Element execute(String service, String args, ServerClient.Input input, ServerClient.Output output)
+            throws Throwable {
+        return execute(service, args, input, output, null);
+    }
+
+    public void discard() {
+        if (_rs != null) {
+            _rs.discard();
+        }
+    }
+
 }
