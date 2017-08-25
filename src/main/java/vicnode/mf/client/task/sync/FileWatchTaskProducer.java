@@ -45,6 +45,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
     private Path _rootDirectory;
     private String _rootNamespace;
     private BlockingQueue<SyncTask> _queue;
+    private boolean _syncDeletion;
 
     private WatchService _watcher;
     private Map<WatchKey, Path> _watchKeys;
@@ -54,7 +55,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
     private Filter _filter;
 
     public FileWatchTaskProducer(MFSession session, Logger logger, Path rootDirectory, String rootNamespace,
-            BlockingQueue<SyncTask> queue) throws IOException {
+            BlockingQueue<SyncTask> queue, boolean syncDeletion) throws IOException {
         _session = session;
         _logger = logger;
         _rootDirectory = rootDirectory;
@@ -127,19 +128,21 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             }
 
             if (kind == ENTRY_DELETE) {
-                SimpleEntry<Boolean, Boolean> exists = exists(_session,
-                        PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)));
-                boolean namespaceExists = exists.getKey();
-                if (namespaceExists) {
-                    // destroy all assets in the corresponding namespace
-                    final String namespace = PathUtils.join(_rootNamespace,
-                            SyncTask.relativePath(_rootDirectory, child));
-                    LoggingUtils.logInfo(_logger, "Destroying namespace: '" + namespace + "'");
-                    softDestroyAllAssets(_session, namespace);
-                }
-                boolean assetExists = exists.getValue();
-                if (assetExists) {
-                    _queue.put(new AssetDestroyTask(_session, _logger, child, _rootDirectory, _rootNamespace));
+                if (_syncDeletion) {
+                    SimpleEntry<Boolean, Boolean> exists = exists(_session,
+                            PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)));
+                    boolean namespaceExists = exists.getKey();
+                    if (namespaceExists) {
+                        // destroy all assets in the corresponding namespace
+                        final String namespace = PathUtils.join(_rootNamespace,
+                                SyncTask.relativePath(_rootDirectory, child));
+                        LoggingUtils.logInfo(_logger, "Destroying namespace: '" + namespace + "'");
+                        softDestroyAllAssets(_session, namespace);
+                    }
+                    boolean assetExists = exists.getValue();
+                    if (assetExists) {
+                        _queue.put(new AssetDestroyTask(_session, _logger, child, _rootDirectory, _rootNamespace));
+                    }
                 }
             } else {
                 if (!isDirectory && !isRegularFile) {

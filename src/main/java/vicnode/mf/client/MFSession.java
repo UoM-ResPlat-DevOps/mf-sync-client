@@ -1,6 +1,8 @@
 package vicnode.mf.client;
 
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import arc.mf.client.AuthenticationDetails;
 import arc.mf.client.RemoteServer;
@@ -18,6 +20,7 @@ public class MFSession {
     private RemoteServer _rs;
     private AuthenticationDetails _auth;
     private String _sessionId;
+    private Timer _timer;
 
     public MFSession(ConnectionSettings settings) {
         _settings = settings;
@@ -98,6 +101,30 @@ public class MFSession {
     public void discard() {
         if (_rs != null) {
             _rs.discard();
+        }
+        stopPingServerPeriodically();
+    }
+
+    public void startPingServerPeriodically(int period) {
+        stopPingServerPeriodically();
+        _timer = new Timer();
+        _timer.scheduleAtFixedRate(new TimerTask() {
+
+            @Override
+            public void run() {
+                try {
+                    execute("server.ping", null, null, null);
+                } catch (Throwable e) {
+                    e.printStackTrace(System.err);
+                }
+            }
+        }, 0, period);
+    }
+
+    public void stopPingServerPeriodically() {
+        if (_timer != null) {
+            _timer.cancel();
+            _timer = null;
         }
     }
 

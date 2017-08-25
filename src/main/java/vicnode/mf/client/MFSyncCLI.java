@@ -87,6 +87,9 @@ public class MFSyncCLI {
                 } else if (args[i].equals("--create.namespace")) {
                     settings.setCreateNamespace(true);
                     i++;
+                } else if (args[i].equals("--sync.local.deletion")) {
+                    settings.setSyncLocalDeletion(true);
+                    i++;
                 } else if (args[i].equals("--log.dir")) {
                     Path logDir = Paths.get(args[i + 1]);
                     if (Files.exists(logDir) && Files.isDirectory(logDir)) {
@@ -141,7 +144,7 @@ public class MFSyncCLI {
         System.out.println("    "+ MFSync.APP_NAME + " [options] <directory> <asset-namespace>");
         System.out.println();
         System.out.println("DESCRIPTION:");
-        System.out.println("    " + MFSync.APP_NAME + " is file uploading tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.");
+        System.out.println("    " + MFSync.APP_NAME + " is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.");
         System.out.println();
         System.out.println("OPTIONS:");
         System.out.println("    --help                               Display help information.");
@@ -154,6 +157,8 @@ public class MFSyncCLI {
         System.out.println("    --watch                              Start a daemon to watch the changes in the specified directory.");
         System.out.println("    --create.directory                   Create directory if it does not exist.");
         System.out.println("    --create.namespace                   Create asset namespace if it does not exist.");
+        System.out.println("    --sync.local.deletion                Synchronize local deletions.");
+        System.out.println("    --sync.remote.deletion               Synchronize remote deletions.");
         System.out.println("    --threads <n>                        Number of worker threads to upload the files. Defaults to 1.");
         System.out.println("    --log.dir <logging-directory>        The directory to save the logs. Defaults to current work directory.");
         System.out.println("    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.");

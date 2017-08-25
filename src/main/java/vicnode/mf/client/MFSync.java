@@ -66,15 +66,17 @@ public class MFSync implements Runnable {
     private List<TaskConsumer> _consumers;
 
     private boolean _watch;
+    private boolean _syncLocalDeletion;
 
     public MFSync(MFSyncSettings settings) {
         this(new MFSession(settings.setApp(APP_NAME)), settings.directory(), settings.createDirectory(),
                 settings.namespace(), settings.createNamespace(), settings.numberOfThreads(), settings.watch(),
-                settings.logDirectory());
+                settings.syncLocalDeletion(), settings.logDirectory());
     }
 
     public MFSync(MFSession session, Path directory, boolean createDirectoryIfNotExists, String namespace,
-            boolean createNamespaceIfNotExists, int nbConsumers, boolean watch, Path logDir) {
+            boolean createNamespaceIfNotExists, int nbConsumers, boolean watch, boolean syncLocalDeletion,
+            Path logDir) {
         _session = session;
         _directory = directory;
         _createDirectoryIfNotExists = createDirectoryIfNotExists;
@@ -104,12 +106,18 @@ public class MFSync implements Runnable {
         });
 
         _watch = watch;
+        _syncLocalDeletion = syncLocalDeletion;
 
     }
 
     @Override
     public void run() {
         try {
+            /*
+             * run server.ping periodically to keep the session alive
+             */
+            _session.startPingServerPeriodically(60000);
+
             /*
              * check if directory exists
              */
@@ -173,7 +181,10 @@ public class MFSync implements Runnable {
              * Run AssetSyncTaskProducer: go through the assets in the remote
              * asset namespace, and delete the assets do not exist locally
              */
-            _producerThreadPool.submit(new AssetSyncTaskProducer(_session, _logger, _directory, _namespace, _queue));
+            if (_syncLocalDeletion) {
+                _producerThreadPool
+                        .submit(new AssetSyncTaskProducer(_session, _logger, _directory, _namespace, _queue));
+            }
 
             /*
              * Start consumer threads.
@@ -190,8 +201,9 @@ public class MFSync implements Runnable {
              * asset namespace...
              */
             if (_watch) {
-                _producerThreadPool.submit(new FileWatchTaskProducer(_session, _logger, _directory, _namespace, _queue)
-                        .setFilter(logFileFilter));
+                _producerThreadPool.submit(
+                        new FileWatchTaskProducer(_session, _logger, _directory, _namespace, _queue, _syncLocalDeletion)
+                                .setFilter(logFileFilter));
             } else {
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -217,6 +229,7 @@ public class MFSync implements Runnable {
         if (_producerThreadPool != null && !_producerThreadPool.isTerminated()) {
             _producerThreadPool.shutdownNow();
         }
+        _session.stopPingServerPeriodically();
     }
 
     protected String logFilePrefix() {

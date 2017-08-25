@@ -15,6 +15,7 @@ public class MFSyncSettings extends ConnectionSettings {
     public static final String PROPERTY_CREATE_NAMESPACE = "create.namespace";
     public static final String PROPERTY_THREADS = "threads";
     public static final String PROPERTY_WATCH = "watch";
+    public static final String PROPERTY_SYNC_LOCAL_DELETION = "sync.local.deletion";
     public static final String PROPERTY_LOG_DIRECTORY = "log.dir";
 
     private Path _directory;
@@ -23,6 +24,7 @@ public class MFSyncSettings extends ConnectionSettings {
     private boolean _createNamespace = false;
     private int _nbThreads = 1;
     private boolean _watch = false;
+    private boolean _syncLocalDeletion = false;
 
     private Path _logDir;
 
@@ -74,6 +76,9 @@ public class MFSyncSettings extends ConnectionSettings {
             }
             if (properties.containsKey(PROPERTY_WATCH)) {
                 _watch = Boolean.parseBoolean(properties.getProperty(PROPERTY_WATCH));
+            }
+            if (properties.containsKey(PROPERTY_SYNC_LOCAL_DELETION)) {
+                _syncLocalDeletion = Boolean.parseBoolean(properties.getProperty(PROPERTY_SYNC_LOCAL_DELETION));
             }
             if (properties.containsKey(PROPERTY_LOG_DIRECTORY)) {
                 _logDir = Paths.get(properties.getProperty(PROPERTY_LOG_DIRECTORY));
@@ -130,6 +135,11 @@ public class MFSyncSettings extends ConnectionSettings {
         return this;
     }
 
+    public MFSyncSettings setSyncLocalDeletion(boolean syncLocalDeletion) {
+        _syncLocalDeletion = syncLocalDeletion;
+        return this;
+    }
+
     public void validate() throws Throwable {
         super.validate();
         if (_directory == null) {
@@ -158,6 +168,10 @@ public class MFSyncSettings extends ConnectionSettings {
 
     public boolean watch() {
         return _watch;
+    }
+
+    public boolean syncLocalDeletion() {
+        return _syncLocalDeletion;
     }
 
 }
