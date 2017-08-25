@@ -158,7 +158,6 @@ public class MFSyncCLI {
         System.out.println("    --create.directory                   Create directory if it does not exist.");
         System.out.println("    --create.namespace                   Create asset namespace if it does not exist.");
         System.out.println("    --sync.local.deletion                Synchronize local deletions.");
-        System.out.println("    --sync.remote.deletion               Synchronize remote deletions.");
         System.out.println("    --threads <n>                        Number of worker threads to upload the files. Defaults to 1.");
         System.out.println("    --log.dir <logging-directory>        The directory to save the logs. Defaults to current work directory.");
         System.out.println("    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.");
