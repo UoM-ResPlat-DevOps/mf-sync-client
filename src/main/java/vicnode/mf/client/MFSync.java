@@ -211,6 +211,8 @@ public class MFSync implements Runnable {
                     _queue.put(new PoisonTask());
                 }
                 _consumerThreadPool.shutdown();
+                _consumerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+                _session.stopPingServerPeriodically();
             }
 
         } catch (Throwable e) {
