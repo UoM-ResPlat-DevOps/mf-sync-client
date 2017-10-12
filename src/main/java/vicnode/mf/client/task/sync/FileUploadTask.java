@@ -30,6 +30,7 @@ public class FileUploadTask extends SyncTask {
     @Override
     public void execute(MFSession session) throws Throwable {
         PosixAttributes fileAttrs = null;
+        long fileSize = Files.size(_file);
         String assetPath = PathUtils.join(rootNamespace(), relativePath(rootDirectory(), _file));
         String assetId = null;
         // check if asset exists
@@ -44,7 +45,6 @@ public class FileUploadTask extends SyncTask {
             assetId = ae.value("@id");
             if (ae.elementExists("content") && ae.elementExists("meta/" + PosixAttributes.DOC_TYPE)) {
                 long assetContentSize = ae.longValue("content/size");
-                long fileSize = Files.size(_file);
                 if (assetContentSize == fileSize) {
                     PosixAttributes attrs = new PosixAttributes(ae.element("meta/" + PosixAttributes.DOC_TYPE));
                     fileAttrs = PosixAttributes.read(_file);
@@ -79,7 +79,7 @@ public class FileUploadTask extends SyncTask {
         fileAttrs.save(w2);
         w2.pop();
         String fileExt = PathUtils.getFileExtension(_file.toString());
-        ServerClient.Input input = new ServerClient.GeneratedInput(null, fileExt, _file.toString(), workTotal()) {
+        ServerClient.Input input = new ServerClient.GeneratedInput(null, fileExt, _file.toString(), fileSize) {
             @Override
             protected void copyTo(OutputStream out, AbortCheck ac) throws Throwable {
                 try {
