@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -151,7 +152,7 @@ public class MFSync implements Runnable {
             Filter logFileFilter = new Filter() {
 
                 @Override
-                public boolean acceptFile(Path file) {
+                public boolean acceptFile(Path file, BasicFileAttributes attrs) {
                     String path = file.toAbsolutePath().toString();
                     String logFilePrefix = logFilePrefix();
                     boolean exclude = path.startsWith(logFilePrefix + ".")
@@ -165,7 +166,7 @@ public class MFSync implements Runnable {
                 }
 
                 @Override
-                public boolean acceptDirectory(Path dir) {
+                public boolean acceptDirectory(Path dir, BasicFileAttributes attrs) {
                     return true;
                 }
             };
@@ -174,7 +175,7 @@ public class MFSync implements Runnable {
              * Run FileSyncTaskProducer: go through the files in the local
              * directory, and upload them to the remote asset namespace.
              */
-            _producerThreadPool.submit(new FileSyncTaskProducer(_session, _logger, _directory, _namespace, _queue)
+            _producerThreadPool.submit(new FileSyncTaskProducer(_session, _logger, _directory, _namespace, true, _queue)
                     .setFilter(logFileFilter));
 
             /*

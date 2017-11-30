@@ -24,14 +24,16 @@ public class FileSyncTaskProducer implements Runnable {
 
     private Path _rootDirectory;
     private String _rootNamespace;
+    private boolean _createNamespace;
 
     public FileSyncTaskProducer(MFSession session, Logger logger, Path rootDirectory, String rootNamespace,
-            BlockingQueue<SyncTask> queue) {
+            boolean createNamespace, BlockingQueue<SyncTask> queue) {
         _session = session;
         _logger = logger;
         _queue = queue;
         _rootDirectory = rootDirectory;
         _rootNamespace = rootNamespace;
+        _createNamespace = createNamespace;
     }
 
     @Override
@@ -49,11 +51,14 @@ public class FileSyncTaskProducer implements Runnable {
     }
 
     protected void execute() throws Throwable {
+        if (_createNamespace) {
+            AssetNamespaceCreateTask.createNamespace(_session, _rootNamespace, _logger);
+        }
         Files.walkFileTree(_rootDirectory, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 try {
-                    if (_filter == null || _filter.acceptFile(file)) {
+                    if (_filter == null || _filter.acceptFile(file, attrs)) {
                         _queue.put(new FileUploadTask(_session, _logger, file, _rootDirectory, _rootNamespace));
                     }
                 } catch (Throwable e) {
@@ -77,7 +82,24 @@ public class FileSyncTaskProducer implements Runnable {
                 if (ioe != null) {
                     LoggingUtils.log(_logger, Level.SEVERE, ioe.getMessage(), ioe);
                 }
-                if (_filter == null || _filter.acceptDirectory(dir)) {
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                if (_filter == null || _filter.acceptDirectory(dir, attrs)) {
+                    if (_createNamespace) {
+                        try {
+                            _queue.put(new AssetNamespaceCreateTask(_session, _logger, dir, _rootDirectory,
+                                    _rootNamespace));
+                        } catch (Throwable e) {
+                            if (e instanceof InterruptedException) {
+                                Thread.currentThread().interrupt();
+                                return FileVisitResult.TERMINATE;
+                            }
+                            LoggingUtils.log(_logger, Level.SEVERE, e.getMessage(), e);
+                        }
+                    }
                     return FileVisitResult.CONTINUE;
                 } else {
                     return FileVisitResult.SKIP_SUBTREE;

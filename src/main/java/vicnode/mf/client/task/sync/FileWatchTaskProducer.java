@@ -116,12 +116,13 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             WatchEvent<Path> ev = (WatchEvent<Path>) event;
             Path name = ev.context();
             Path child = dir.resolve(name);
+            BasicFileAttributes childAttrs = Files.readAttributes(child, BasicFileAttributes.class);
 
             boolean isDirectory = Files.isDirectory(child, NOFOLLOW_LINKS);
             boolean isRegularFile = Files.isRegularFile(child, NOFOLLOW_LINKS);
 
             // log event
-            if (_filter != null && isRegularFile && !_filter.acceptFile(child)) {
+            if (_filter != null && isRegularFile && !_filter.acceptFile(child, childAttrs)) {
                 // DO not log it.
             } else {
                 LoggingUtils.logInfo(_logger, String.format("Processing event: %s: %s", ev.kind().name(), child));
@@ -161,13 +162,13 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                         // upload the directory (It may be empty if the event
                         // was triggered by mkdir; Otherwise it may contains
                         // files if the event was triggered by mv)
-                        if (_filter == null || _filter.acceptDirectory(child)) {
+                        if (_filter == null || _filter.acceptDirectory(child, childAttrs)) {
                             new FileSyncTaskProducer(_session, _logger, child,
-                                    PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)),
+                                    PathUtils.join(_rootNamespace, SyncTask.relativePath(_rootDirectory, child)), true,
                                     _queue).execute();
                         }
                     } else if (isRegularFile) {
-                        if (_filter == null || _filter.acceptFile(child)) {
+                        if (_filter == null || _filter.acceptFile(child, childAttrs)) {
                             _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
                         }
                     }
@@ -175,7 +176,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                     if (isDirectory) {
                         // TODO
                     } else if (isRegularFile) {
-                        if (_filter == null || _filter.acceptFile(child)) {
+                        if (_filter == null || _filter.acceptFile(child, childAttrs)) {
                             _queue.put(new FileUploadTask(_session, _logger, child, _rootDirectory, _rootNamespace));
                         }
                     }
