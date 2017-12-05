@@ -27,6 +27,7 @@ OPTIONS:
     --mf.token <token>                   The Mediaflux secure identity token.
     --mf.sid <sid>                       The Mediaflux session id.
     --watch                              Start a daemon to watch the changes in the specified directory.
+    --sync.local.deletion                Synchronize local deletions.
     --threads <n>                        Number of worker threads to upload the files. Defaults to 1.
     --log.dir <logging-directory>        The directory to save the logs. Defaults to current work directory.
     --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.
@@ -96,8 +97,9 @@ namespace=/path/to/dst-namespace
 
 ## IV. Limitations
 
-### 1. Namespaces contains soft-destroyed assets cannot be destroyed
-  * When a local file is deleted, the corresponding remote asset will be **soft-destroyed**. When a local directory is deleted, all the assets in the corresponding remote namespace are **soft-destroyed**. But we cannot hide the namespace contains only soft-destroyed assets.
+### 1. (In daemon/watch mode) namespaces contains soft-destroyed assets cannot be destroyed
+  * When running as daemon by specifying --watch argument, local file deletions will NOT be synchronised unless --sync.local.deletion is enabled;
+  * If --watch and --sync.local.deletion are enabled, when a local file is deleted, the corresponding remote asset will be **soft-destroyed**. When a local directory is deleted, all the assets in the corresponding remote namespace are **soft-destroyed**. But we cannot hide the namespace that contains only soft-destroyed assets.
 
-### 2. Rename/Move a directory causes file uploads
-  * When monitoring the changes in the local directory, **DIRECTORY_RENAME** event cannot be detected. This is due to the limitation of Java File Watcher Service. Instead, **DIRECTORY_DELETE** and **DIRECTORY_CREATE** events are triggered when renaming/moving a directory. This will cause the **NAMESPACE_DESTROY** and **NAMESPACE_CREATE** action on Mediaflux server. Since the assets are **soft** destroyed, the above (two) actions will cause reuploading the directory to a different location and double the storage usage.
+### 2. (In daemon/watch mode) renaming/moving a directory causes file uploads
+  * When monitoring the changes in the local directory with --watch argument, **DIRECTORY_RENAME** event cannot be detected. This is due to the limitation of Java File Watcher Service. Instead, **DIRECTORY_DELETE** and **DIRECTORY_CREATE** events are triggered when renaming/moving a directory. This will cause the **NAMESPACE_DESTROY** and **NAMESPACE_CREATE** action on Mediaflux server. Since the assets are **soft** destroyed, the above (two) actions will cause reuploading the directory to a different location and double the storage usage.
