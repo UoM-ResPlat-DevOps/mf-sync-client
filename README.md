@@ -88,6 +88,7 @@ watch=true
 directory=/path/to/src-directory
 
 # Remote (parent) destination namespace
+# Results in /path/to/dst-namespace/src-directory being created
 namespace=/path/to/dst-namespace
 
 # Directory to save the logs, defaults to currrent working directory.
