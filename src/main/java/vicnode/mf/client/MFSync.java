@@ -30,6 +30,7 @@ import vicnode.mf.client.task.sync.PoisonTask;
 import vicnode.mf.client.task.sync.SyncTask;
 import vicnode.mf.client.task.sync.TaskConsumer;
 import vicnode.mf.client.util.LoggingUtils;
+import vicnode.mf.client.util.PathUtils;
 import vicnode.mf.client.util.ThrowableUtils;
 
 public class MFSync implements Runnable {
@@ -51,9 +52,7 @@ public class MFSync implements Runnable {
 
     private MFSession _session;
     private Path _directory;
-    private boolean _createDirectoryIfNotExists;
     private String _namespace;
-    private boolean _createNamespaceIfNotExists;
 
     private Path _logDir;
     private Logger _logger;
@@ -70,19 +69,15 @@ public class MFSync implements Runnable {
     private boolean _syncLocalDeletion;
 
     public MFSync(MFSyncSettings settings) {
-        this(new MFSession(settings.setApp(APP_NAME)), settings.directory(), settings.createDirectory(),
-                settings.namespace(), settings.createNamespace(), settings.numberOfThreads(), settings.watch(),
-                settings.syncLocalDeletion(), settings.logDirectory());
+        this(new MFSession(settings.setApp(APP_NAME)), settings.directory(), settings.namespace(),
+                settings.numberOfThreads(), settings.watch(), settings.syncLocalDeletion(), settings.logDirectory());
     }
 
-    public MFSync(MFSession session, Path directory, boolean createDirectoryIfNotExists, String namespace,
-            boolean createNamespaceIfNotExists, int nbConsumers, boolean watch, boolean syncLocalDeletion,
-            Path logDir) {
+    public MFSync(MFSession session, Path directory, String namespace, int nbConsumers, boolean watch,
+            boolean syncLocalDeletion, Path logDir) {
         _session = session;
         _directory = directory;
-        _createDirectoryIfNotExists = createDirectoryIfNotExists;
-        _namespace = namespace;
-        _createNamespaceIfNotExists = createNamespaceIfNotExists;
+        _namespace = PathUtils.join(namespace, directory.getFileName().toString());
 
         _logDir = logDir == null ? DEFAULT_LOG_DIR : logDir.toAbsolutePath();
         _logger = createLogger(_logDir, APP_NAME);
@@ -123,11 +118,7 @@ public class MFSync implements Runnable {
              * check if directory exists
              */
             if (!Files.exists(_directory)) {
-                if (_createDirectoryIfNotExists) {
-                    Files.createDirectory(_directory);
-                } else {
-                    throw new IllegalArgumentException("Directory: '" + _directory + "' does not exist.");
-                }
+                throw new IllegalArgumentException("Directory: '" + _directory + "' does not exist.");
             }
 
             /*
@@ -138,12 +129,7 @@ public class MFSync implements Runnable {
             boolean namespaceExists = _session.execute("asset.namespace.exists", w.document(), null, null, null)
                     .booleanValue("exists");
             if (!namespaceExists) {
-                if (_createNamespaceIfNotExists) {
-                    LoggingUtils.logInfo(_logger, "Creating asset namespace: '" + _namespace + "'");
-                    _session.execute("asset.namespace.create", w.document(), null, null, null);
-                } else {
-                    throw new IllegalArgumentException("Asset namespace: '" + _namespace + "' does not exist.");
-                }
+                throw new IllegalArgumentException("Asset namespace: '" + _namespace + "' does not exist.");
             }
 
             LoggingUtils.logInfo(_logger,

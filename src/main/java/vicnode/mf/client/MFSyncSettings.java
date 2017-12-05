@@ -10,18 +10,14 @@ import vicnode.mf.client.util.PathUtils;
 public class MFSyncSettings extends ConnectionSettings {
 
     public static final String PROPERTY_DIRECTORY = "directory";
-    public static final String PROPERTY_CREATE_DIRECTORY = "create.directory";
     public static final String PROPERTY_NAMESPACE = "namespace";
-    public static final String PROPERTY_CREATE_NAMESPACE = "create.namespace";
     public static final String PROPERTY_THREADS = "threads";
     public static final String PROPERTY_WATCH = "watch";
     public static final String PROPERTY_SYNC_LOCAL_DELETION = "sync.local.deletion";
     public static final String PROPERTY_LOG_DIRECTORY = "log.dir";
 
     private Path _directory;
-    private boolean _createDirectory = false;
-    private String _namespace;
-    private boolean _createNamespace = false;
+    private String _parentNamespace;
     private int _nbThreads = 1;
     private boolean _watch = false;
     private boolean _syncLocalDeletion = false;
@@ -36,14 +32,6 @@ public class MFSyncSettings extends ConnectionSettings {
         super(properties);
     }
 
-    public boolean createDirectory() {
-        return _createDirectory;
-    }
-
-    public boolean createNamespace() {
-        return _createNamespace;
-    }
-
     public Path directory() {
         return _directory;
     }
@@ -55,16 +43,8 @@ public class MFSyncSettings extends ConnectionSettings {
                 _directory = Paths.get(properties.getProperty(PROPERTY_DIRECTORY));
             }
 
-            if (properties.containsKey(PROPERTY_CREATE_DIRECTORY)) {
-                _createDirectory = Boolean.parseBoolean(properties.getProperty(PROPERTY_CREATE_DIRECTORY));
-            }
-
             if (properties.containsKey(PROPERTY_NAMESPACE)) {
-                _namespace = properties.getProperty(PROPERTY_NAMESPACE);
-            }
-
-            if (properties.containsKey(PROPERTY_CREATE_NAMESPACE)) {
-                _createNamespace = Boolean.parseBoolean(properties.getProperty(PROPERTY_CREATE_NAMESPACE));
+                _parentNamespace = properties.getProperty(PROPERTY_NAMESPACE);
             }
 
             if (properties.containsKey(PROPERTY_THREADS)) {
@@ -91,21 +71,11 @@ public class MFSyncSettings extends ConnectionSettings {
     }
 
     public String namespace() {
-        return _namespace;
+        return _parentNamespace;
     }
 
     public int numberOfThreads() {
         return _nbThreads;
-    }
-
-    public MFSyncSettings setCreateDirectory(boolean createDirectory) {
-        _createDirectory = createDirectory;
-        return this;
-    }
-
-    public MFSyncSettings setCreateNamespace(boolean createNamespace) {
-        _createNamespace = createNamespace;
-        return this;
     }
 
     public MFSyncSettings setDirectory(Path directory) {
@@ -119,7 +89,7 @@ public class MFSyncSettings extends ConnectionSettings {
     }
 
     public MFSyncSettings setNamespace(String namespace) {
-        _namespace = namespace;
+        _parentNamespace = namespace;
         return this;
     }
 
@@ -145,13 +115,13 @@ public class MFSyncSettings extends ConnectionSettings {
         if (_directory == null) {
             throw new IllegalArgumentException("Missing directory argument.");
         } else {
-            if (!Files.exists(_directory) && !_createNamespace) {
+            if (!Files.exists(_directory)) {
                 throw new IllegalArgumentException(
                         "Invalid directory argument. Directory: '" + _directory + "' does not exist.");
             }
         }
-        if (_namespace == null) {
-            throw new IllegalArgumentException("Missing namespace argument.");
+        if (_parentNamespace == null) {
+            throw new IllegalArgumentException("Missing destination (parent) namespace argument.");
         }
         if (_watch) {
             Path logDir = _logDir == null ? MFSync.DEFAULT_LOG_DIR : _logDir;

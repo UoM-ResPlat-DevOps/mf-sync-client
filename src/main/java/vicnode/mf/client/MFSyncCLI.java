@@ -81,12 +81,6 @@ public class MFSyncCLI {
                 } else if (args[i].equals("--watch")) {
                     settings.setWatch(true);
                     i++;
-                } else if (args[i].equals("--create.directory")) {
-                    settings.setCreateDirectory(true);
-                    i++;
-                } else if (args[i].equals("--create.namespace")) {
-                    settings.setCreateNamespace(true);
-                    i++;
                 } else if (args[i].equals("--sync.local.deletion")) {
                     settings.setSyncLocalDeletion(true);
                     i++;
@@ -155,8 +149,6 @@ public class MFSyncCLI {
         System.out.println("    --mf.token <token>                   The Mediaflux secure identity token.");
         System.out.println("    --mf.sid <sid>                       The Mediaflux session id.");
         System.out.println("    --watch                              Start a daemon to watch the changes in the specified directory.");
-        System.out.println("    --create.directory                   Create directory if it does not exist.");
-        System.out.println("    --create.namespace                   Create asset namespace if it does not exist.");
         System.out.println("    --sync.local.deletion                Synchronize local deletions.");
         System.out.println("    --threads <n>                        Number of worker threads to upload the files. Defaults to 1.");
         System.out.println("    --log.dir <logging-directory>        The directory to save the logs. Defaults to current work directory.");

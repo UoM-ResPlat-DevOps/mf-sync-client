@@ -4,7 +4,7 @@
 
 	<groupId>vicnode</groupId>
 	<artifactId>mf-sync-client</artifactId>
-	<version>0.0.4</version>
+	<version>0.0.5</version>
 	<packaging>jar</packaging>
 	<name>mf-sync-client</name>
 	<url>https://github.com/uom-daris/mf-sync-client</url>
