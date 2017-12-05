@@ -99,8 +99,8 @@ public class MFSyncCLI {
                     if (settings.directory() == null) {
                         settings.setDirectory(Paths.get(args[i]));
                     } else {
-                        if (settings.namespace() == null) {
-                            settings.setNamespace(args[i]);
+                        if (settings.parentNamespace() == null) {
+                            settings.setParentNamespace(args[i]);
                         } else {
                             throw new IllegalArgumentException("Invalid arguments.");
                         }
@@ -155,8 +155,8 @@ public class MFSyncCLI {
         System.out.println("    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.");
         System.out.println();
         System.out.println("POSITIONAL ARGUMENTS:");        
-        System.out.println("    <directory>                          The local directory to upload/synchronize from.");
-        System.out.println("    <asset-namespace>                    The remote asset namespace to upload/synchronize to.");
+        System.out.println("    <src-directory>                      The local sourcedirectory to upload/synchronize from.");
+        System.out.println("    <dst-asset-namespace>                The remote (parent) destination asset namespace to upload/synchronize to.");
         System.out.println();
         // @formatter:on
     }

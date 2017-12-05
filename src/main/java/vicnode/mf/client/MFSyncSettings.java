@@ -10,7 +10,8 @@ import vicnode.mf.client.util.PathUtils;
 public class MFSyncSettings extends ConnectionSettings {
 
     public static final String PROPERTY_DIRECTORY = "directory";
-    public static final String PROPERTY_NAMESPACE = "namespace";
+    public static final String PROPERTY_NAMESPACE = "namespace"; // parent
+                                                                 // namespace
     public static final String PROPERTY_THREADS = "threads";
     public static final String PROPERTY_WATCH = "watch";
     public static final String PROPERTY_SYNC_LOCAL_DELETION = "sync.local.deletion";
@@ -70,7 +71,7 @@ public class MFSyncSettings extends ConnectionSettings {
         return _logDir;
     }
 
-    public String namespace() {
+    public String parentNamespace() {
         return _parentNamespace;
     }
 
@@ -88,8 +89,8 @@ public class MFSyncSettings extends ConnectionSettings {
         return this;
     }
 
-    public MFSyncSettings setNamespace(String namespace) {
-        _parentNamespace = namespace;
+    public MFSyncSettings setParentNamespace(String parentNamespace) {
+        _parentNamespace = parentNamespace;
         return this;
     }
 

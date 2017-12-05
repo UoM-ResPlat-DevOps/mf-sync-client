@@ -21,7 +21,6 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
-import arc.xml.XmlStringWriter;
 import vicnode.mf.client.file.Filter;
 import vicnode.mf.client.task.sync.AssetSyncTaskProducer;
 import vicnode.mf.client.task.sync.FileSyncTaskProducer;
@@ -29,6 +28,7 @@ import vicnode.mf.client.task.sync.FileWatchTaskProducer;
 import vicnode.mf.client.task.sync.PoisonTask;
 import vicnode.mf.client.task.sync.SyncTask;
 import vicnode.mf.client.task.sync.TaskConsumer;
+import vicnode.mf.client.util.AssetNamespaceUtils;
 import vicnode.mf.client.util.LoggingUtils;
 import vicnode.mf.client.util.PathUtils;
 import vicnode.mf.client.util.ThrowableUtils;
@@ -52,6 +52,7 @@ public class MFSync implements Runnable {
 
     private MFSession _session;
     private Path _directory;
+    private String _parentNamespace;
     private String _namespace;
 
     private Path _logDir;
@@ -69,15 +70,16 @@ public class MFSync implements Runnable {
     private boolean _syncLocalDeletion;
 
     public MFSync(MFSyncSettings settings) {
-        this(new MFSession(settings.setApp(APP_NAME)), settings.directory(), settings.namespace(),
+        this(new MFSession(settings.setApp(APP_NAME)), settings.directory(), settings.parentNamespace(),
                 settings.numberOfThreads(), settings.watch(), settings.syncLocalDeletion(), settings.logDirectory());
     }
 
-    public MFSync(MFSession session, Path directory, String namespace, int nbConsumers, boolean watch,
+    public MFSync(MFSession session, Path directory, String parentNamespace, int nbConsumers, boolean watch,
             boolean syncLocalDeletion, Path logDir) {
         _session = session;
         _directory = directory;
-        _namespace = PathUtils.join(namespace, directory.getFileName().toString());
+        _parentNamespace = parentNamespace;
+        _namespace = PathUtils.join(_parentNamespace, _directory.getFileName().toString());
 
         _logDir = logDir == null ? DEFAULT_LOG_DIR : logDir.toAbsolutePath();
         _logger = createLogger(_logDir, APP_NAME);
@@ -122,15 +124,17 @@ public class MFSync implements Runnable {
             }
 
             /*
-             * check if namespace exists
+             * check if parent namespace exists
              */
-            XmlStringWriter w = new XmlStringWriter();
-            w.add("namespace", _namespace);
-            boolean namespaceExists = _session.execute("asset.namespace.exists", w.document(), null, null, null)
-                    .booleanValue("exists");
-            if (!namespaceExists) {
-                throw new IllegalArgumentException("Asset namespace: '" + _namespace + "' does not exist.");
+            if (!AssetNamespaceUtils.assetNamespaceExists(_session, _parentNamespace)) {
+                throw new IllegalArgumentException(
+                        "Destination parent asset namespace: '" + _parentNamespace + "' does not exist.");
             }
+
+            /*
+             * create corresponding namespace if not exist.
+             */
+            AssetNamespaceUtils.createAssetNamespace(_session, _namespace, _logger);
 
             LoggingUtils.logInfo(_logger,
                     "Syncing from directory: '" + _directory + "' to asset namespace: '" + _namespace + "'");

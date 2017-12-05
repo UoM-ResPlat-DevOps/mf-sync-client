@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 
 import vicnode.mf.client.MFSession;
 import vicnode.mf.client.file.Filter;
+import vicnode.mf.client.util.AssetNamespaceUtils;
 import vicnode.mf.client.util.LoggingUtils;
 
 public class FileSyncTaskProducer implements Runnable {
@@ -52,7 +53,7 @@ public class FileSyncTaskProducer implements Runnable {
 
     protected void execute() throws Throwable {
         if (_createNamespace) {
-            AssetNamespaceCreateTask.createNamespace(_session, _rootNamespace, _logger);
+            AssetNamespaceUtils.createAssetNamespace(_session, _rootNamespace, _logger);
         }
         Files.walkFileTree(_rootDirectory, new SimpleFileVisitor<Path>() {
             @Override
