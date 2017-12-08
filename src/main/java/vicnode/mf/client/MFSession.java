@@ -108,7 +108,7 @@ public class MFSession {
             return cxn.executeMultiInput(null, service, args, input == null ? null : Arrays.asList(input), output, ops);
         } catch (ServerClient.ExSessionInvalid si) {
             if (_auth != null && retryTimes > 0) {
-                System.out.println("Session invalid. Re-authenticating...");
+                System.out.println("Session invalid. Try re-authenticating...");
                 if (_settings.executeRetryInterval() > 0) {
                     Thread.sleep(_settings.executeRetryInterval());
                 }
