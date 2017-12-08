@@ -21,6 +21,10 @@ public class ConnectionSettings {
     public static final String PROPERTY_USER = "mf.user";
     public static final String PROPERTY_PASSWORD = "mf.password";
     public static final String PROPERTY_SID = "mf.sid";
+    public static final String PROPERTY_CONNECT_RETRY_TIMES = "mf.connect.retry.times";
+    public static final String PROPERTY_CONNECT_RETRY_INTERVAL = "mf.connect.retry.interval";
+    public static final String PROPERTY_EXECUTE_RETRY_TIMES = "mf.execute.retry.times";
+    public static final String PROPERTY_EXECUTE_RETRY_INTERVAL = "mf.execute.retry.interval";
 
     private String _app;
     private String _domain;
@@ -32,6 +36,11 @@ public class ConnectionSettings {
     private String _token;
     private String _user;
     private String _sid;
+
+    private int _connectRetryTimes = MFSession.DEFAULT_CONNECT_RETRY_TIMES;
+    private int _connectRetryInterval = MFSession.DEFAULT_CONNECT_RETRY_INTERVAL;
+    private int _executeRetryTimes = MFSession.DEFAULT_EXECUTE_RETRY_TIMES;
+    private int _executeRetryInterval = MFSession.DEFAULT_EXECUTE_RETRY_INTERVAL;
 
     public ConnectionSettings(Properties properties) {
         loadFromProperties(properties);
@@ -113,6 +122,22 @@ public class ConnectionSettings {
             }
             if (properties.containsKey(PROPERTY_SID)) {
                 _sid = properties.getProperty(PROPERTY_SID);
+            }
+            if (properties.containsKey(PROPERTY_CONNECT_RETRY_TIMES)) {
+                String connectRetryTimes = properties.getProperty(PROPERTY_CONNECT_RETRY_TIMES);
+                setConnectRetryTimes(Integer.parseInt(connectRetryTimes));
+            }
+            if (properties.containsKey(PROPERTY_CONNECT_RETRY_INTERVAL)) {
+                String connectRetryInterval = properties.getProperty(PROPERTY_CONNECT_RETRY_INTERVAL);
+                setConnectRetryInterval(Integer.parseInt(connectRetryInterval));
+            }
+            if (properties.containsKey(PROPERTY_EXECUTE_RETRY_TIMES)) {
+                String executeRetryTimes = properties.getProperty(PROPERTY_EXECUTE_RETRY_TIMES);
+                setExecuteRetryTimes(Integer.parseInt(executeRetryTimes));
+            }
+            if (properties.containsKey(PROPERTY_EXECUTE_RETRY_INTERVAL)) {
+                String executeRetryInterval = properties.getProperty(PROPERTY_EXECUTE_RETRY_INTERVAL);
+                setExecuteRetryInterval(Integer.parseInt(executeRetryInterval));
             }
         }
     }
@@ -256,6 +281,42 @@ public class ConnectionSettings {
 
     public String user() {
         return _user;
+    }
+
+    public ConnectionSettings setConnectRetryTimes(int retryTimes) {
+        _connectRetryTimes = retryTimes;
+        return this;
+    }
+
+    public int connectRetryTimes() {
+        return _connectRetryTimes;
+    }
+
+    public ConnectionSettings setConnectRetryInterval(int millisecs) {
+        _connectRetryInterval = millisecs;
+        return this;
+    }
+
+    public int connectRetryInterval() {
+        return _connectRetryInterval;
+    }
+
+    public ConnectionSettings setExecuteRetryTimes(int retryTimes) {
+        _executeRetryTimes = retryTimes;
+        return this;
+    }
+
+    public int executeRetryTimes() {
+        return _executeRetryTimes;
+    }
+
+    public ConnectionSettings setExecuteRetryInterval(int millisecs) {
+        _executeRetryInterval = millisecs;
+        return this;
+    }
+
+    public int executeRetryInterval() {
+        return _executeRetryInterval;
     }
 
     public void validate() throws Throwable {
