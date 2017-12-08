@@ -114,8 +114,13 @@ public class MFSyncCLI {
             printUsage();
             System.exit(1);
         }
-
-        final MFSync sync = new MFSync(settings);
+        MFSync sync = new MFSync(settings);
+        if (!sync.assetNamespaceExists(settings.parentNamespace())) {
+            System.err.println(
+                    "Error: destination parent namespace: '" + settings.parentNamespace() + "' does not exist.");
+            printUsage();
+            System.exit(1);
+        }
         if (settings.watch()) {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 

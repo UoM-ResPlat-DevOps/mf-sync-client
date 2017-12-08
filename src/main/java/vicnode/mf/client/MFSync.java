@@ -108,6 +108,10 @@ public class MFSync implements Runnable {
 
     }
 
+    public boolean assetNamespaceExists(String namespace) throws Throwable {
+        return AssetNamespaceUtils.assetNamespaceExists(_session, _parentNamespace);
+    }
+
     @Override
     public void run() {
         try {
