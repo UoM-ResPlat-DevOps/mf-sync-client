@@ -64,6 +64,7 @@ public class MFSession {
             return cxn;
         } catch (java.net.ConnectException ce) {
             if (retryTimes > 0) {
+                System.out.println("Failed to connect. Retrying ...");
                 if (_settings.connectRetryInterval() > 0) {
                     Thread.sleep(_settings.connectRetryInterval());
                 }
@@ -107,6 +108,7 @@ public class MFSession {
             return cxn.executeMultiInput(null, service, args, input == null ? null : Arrays.asList(input), output, ops);
         } catch (ServerClient.ExSessionInvalid si) {
             if (_auth != null && retryTimes > 0) {
+                System.out.println("Session invalid. Re-authenticating...");
                 if (_settings.executeRetryInterval() > 0) {
                     Thread.sleep(_settings.executeRetryInterval());
                 }
