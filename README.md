@@ -53,7 +53,7 @@ kill -15 <pid>
 
 ## III. Configuration
 
-  * The default config file location is **$HOME/.mediaflux/mf-sync.properties** (or **%USERPROFILE%/.mediaflux/mf-sync.properties** )
+  * The default config file location is **$HOME/.mediaflux/mf-sync.properties** (or **%USERPROFILE%/.mediaflux/mf-sync.properties** on Windows)
     * On Windows you can create the directory in **Command Prompt** with following command:
       * ```mkdir %USERPROFILE%/.mediaflux```
   * You can also specify --conf <config-file> to override it.
