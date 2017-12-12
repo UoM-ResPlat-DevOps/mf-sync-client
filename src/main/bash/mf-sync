@@ -5,4 +5,4 @@
 JAR=$(dirname $0)/mf-sync-client.jar
 [[ ! -f $JAR ]] && echo "${JAR} is not found." >&2 && exit 2
 
-java -cp $JAR vicnode.mf.client.MFSyncCLI ${1+"$@"}
+java -cp $JAR resplat.mf.client.MFSyncCLI ${1+"$@"}

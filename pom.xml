@@ -2,12 +2,12 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>vicnode</groupId>
+	<groupId>au.edu.unimelb.resplat</groupId>
 	<artifactId>mf-sync-client</artifactId>
-	<version>0.0.6</version>
+	<version>0.0.7</version>
 	<packaging>jar</packaging>
 	<name>mf-sync-client</name>
-	<url>https://github.com/uom-daris/mf-sync-client</url>
+	<url>https://github.com/UoM-ResPlat-DevOps/mf-sync-client</url>
 	<description>VicNode Mediaflux sync client.</description>
 	<properties>
 		<maven.compiler.source>1.8</maven.compiler.source>
@@ -50,7 +50,7 @@
 							</descriptorRefs>
 							<archive>
 								<manifest>
-									<mainClass>vicnode.mf.client.MFSyncCLI</mainClass>
+									<mainClass>resplat.mf.client.MFSyncCLI</mainClass>
 								</manifest>
 								<manifestEntries>
 									<App-Version>${project.version}</App-Version>
