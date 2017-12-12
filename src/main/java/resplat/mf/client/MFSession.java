@@ -131,6 +131,11 @@ public class MFSession {
         stopPingServerPeriodically();
     }
 
+    /**
+     * 
+     * @param period
+     *            time in milliseconds.
+     */
     public void startPingServerPeriodically(int period) {
         stopPingServerPeriodically();
         _timer = new Timer();
