@@ -42,7 +42,7 @@ POSITIONAL ARGUMENTS:
 **mf-sync-daemon** is a wrapper shell script to run the **mf-sync** tool as daemon to monitor the changes in the specified directory. It is equivalent to:
 
 ```
-mf-sync --watch [options] <src-directory> <dst-asset-namespace>
+mf-sync --daemon [options] <src-directory> <dst-asset-namespace>
 ```
 
 Additionally, it returns the **pid** (process id). To stop the daemon by **pid**:
