@@ -27,7 +27,7 @@ OPTIONS:
     --mf.token <token>                   The Mediaflux secure identity token.
     --mf.sid <sid>                       The Mediaflux session id.
     --daemon                             Start a daemon to watch the changes in the specified directory.
-    --csum-check                         Validate CRC32 checksum are upload. It will slow down the upload process.
+    --csum-check                         Validate CRC32 checksum. It will slow down the upload process.
     --exclude-empty-folder               Exclude empty folders.
     --number-of-workers <n>              Number of worker threads to upload the files. Defaults to 1.
     --log-dir <logging-directory>        The directory to save the logs. Defaults to current work directory.
