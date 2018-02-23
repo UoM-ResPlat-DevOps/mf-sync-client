@@ -13,10 +13,10 @@ A client application to upload local files to Mediaflux server.
 
 ```
 USAGE:
-    mf-sync [options] <src-directory> <dst-asset-namespace>
+    mf-sync [options] [src-directory dst-asset-namespace]
 
 DESCRIPTION:
-    mf-sync is file uploading tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.
+    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.
 
 OPTIONS:
     --help                               Display help information.
@@ -26,14 +26,15 @@ OPTIONS:
     --mf.auth <domain,user,password>     The Mediaflux user authentication deatils.
     --mf.token <token>                   The Mediaflux secure identity token.
     --mf.sid <sid>                       The Mediaflux session id.
-    --watch                              Start a daemon to watch the changes in the specified directory.
-    --sync.local.deletion                Synchronize local deletions.
-    --threads <n>                        Number of worker threads to upload the files. Defaults to 1.
-    --log.dir <logging-directory>        The directory to save the logs. Defaults to current work directory.
+    --daemon                             Start a daemon to watch the changes in the specified directory.
+    --csum-check                         Validate CRC32 checksum are upload. It will slow down the upload process.
+    --exclude-empty-folder               Exclude empty folders.
+    --number-of-workers <n>              Number of worker threads to upload the files. Defaults to 1.
+    --log-dir <logging-directory>        The directory to save the logs. Defaults to current work directory.
     --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.
 
 POSITIONAL ARGUMENTS:
-    <src-directory>                      The local directory to upload/synchronize from.
+    <src-directory>                      The local sourcedirectory to upload/synchronize from.
     <dst-asset-namespace>                The remote (parent) destination asset namespace to upload/synchronize to.
 ```
 
@@ -53,7 +54,7 @@ kill -15 <pid>
 
 ## III. Configuration
 
-  * The default config file location is **$HOME/.mediaflux/mf-sync.properties** (or **%USERPROFILE%/.mediaflux/mf-sync.properties** on Windows)
+  * The default config file location is **$HOME/.mediaflux/mf-sync-properties.xml** (or **%USERPROFILE%/.mediaflux/mf-sync-properties.xml** on Windows)
     * On Windows you can create the directory in **Command Prompt** with following command:
       * ```mkdir %USERPROFILE%/.mediaflux```
   * You can also specify --conf <config-file> to override it.
@@ -64,45 +65,59 @@ kill -15 <pid>
     3. load settings in the command arguments;
  
  ### Sample config file
- ```shell
- # Mediaflux server host
-mf.host=mediaflux.your-organization.org
-
-# Mediaflux server port
-mf.port=443
-
-# Mediaflux server transport protocol, can be http, https or tcp/ip.
-mf.transport=https
-
-# Mediaflux user credentials. If not specified, mf.token must be present.
-#mf.auth=domain,user,password
-
-# Mediaflux secure identity token
-mf.token=XXXXXXXXXXXXXXXXX
-
-# Number of worker threads
-threads=1
-
-# Watch the changes of the specified (Run as daemon)
-watch=true
-
-# Source directory
-directory=/path/to/src-directory
-
-# Remote (parent) destination namespace
-# Results in /path/to/dst-namespace/src-directory being created
-namespace=/path/to/dst-namespace
-
-# Directory to save the logs, defaults to currrent working directory.
-#log.dir=/path/to/logs/
-
+ ```xml
+<?xml version="1.0"?>
+<properties>
+	<server>
+		<host>mediaflux.your-domain.org</host>
+		<port>443</port>
+		<protocol>https</protocol>
+		<session>
+			<connectRetryTimes>5</connectRetryTimes>
+			<connectRetryInterval>1000</connectRetryInterval>
+			<executeRetryTimes>5</executeRetryTimes>
+			<executeRetryInterval>1000</executeRetryInterval>
+		</session>
+	</server>
+	<credential>
+		<app>mf-sync</app>
+		<domain>domain1</domain>
+		<user>user1</user>
+		<password>XXXYYYZZZ</password>
+        <!--
+		<token>1234567890abcdef</token>
+        -->
+	</credential>
+	<sync>
+		<settings>
+			<numberOfWorkers>2</numberOfWorkers>
+			<csumCheck>true</csumCheck>
+			<watchDaemon>false</watchDaemon>
+			<logDirectory>/tmp</logDirectory>
+			<excludeEmptyFolder>false</excludeEmptyFolder>
+            <notification>
+                <email>user1@your-domain.org</email>
+            </notification>
+		</settings>
+		<job>
+			<directory>/tmp/src-dir1</directory>
+			<namespace parent="true">/test</namespace>
+			<include>.*\.txt$</include>
+		</job>
+		<job>
+			<directory>/tmp/src-dir2</directory>
+			<namespace parent="true">/test</namespace>
+			<exclude>.*\.bin$</exclude>
+		</job>
+	</sync>
+</properties>
  ```
 
 ## IV. Limitations
 
-### 1. (In daemon/watch mode) namespaces contains soft-destroyed assets cannot be destroyed
+### 1. (In daemon mode) namespaces contains soft-destroyed assets cannot be destroyed
   * When running as daemon by specifying --watch argument, local file deletions will NOT be synchronised unless --sync.local.deletion is enabled;
-  * If --watch and --sync.local.deletion are enabled, when a local file is deleted, the corresponding remote asset will be **soft-destroyed**. When a local directory is deleted, all the assets in the corresponding remote namespace are **soft-destroyed**. But we cannot hide the namespace that contains only soft-destroyed assets.
+  * If daemon mode is enabled, when a local file is deleted, the corresponding remote asset will be **soft-destroyed**. When a local directory is deleted, all the assets in the corresponding remote namespace are **soft-destroyed**. But we cannot hide the namespace that contains only soft-destroyed assets.
 
-### 2. (In daemon/watch mode) renaming/moving a directory causes file uploads
+### 2. (In daemon mode) renaming/moving a directory causes file uploads
   * When monitoring the changes in the local directory with --watch argument, **DIRECTORY_RENAME** event cannot be detected. This is due to the limitation of Java File Watcher Service. Instead, **DIRECTORY_DELETE** and **DIRECTORY_CREATE** events are triggered when renaming/moving a directory. This will cause the **NAMESPACE_DESTROY** and **NAMESPACE_CREATE** action on Mediaflux server. Since the assets are **soft** destroyed, the above (two) actions will cause reuploading the directory to a different location and double the storage usage.
