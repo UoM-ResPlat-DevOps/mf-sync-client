@@ -105,16 +105,30 @@ public class PathUtils {
         return null;
     }
 
-    public static boolean isOrIsDescendant(Path a, Path b) {
-        return isOrIsDescendant(a == null ? null : a.toAbsolutePath().toString(),
-                b == null ? null : b.toAbsolutePath().toString());
+    public static boolean isOrIsDescendant(Path child, Path parent) {
+        return isOrIsDescendant(child == null ? null : child.toAbsolutePath().toString(),
+                parent == null ? null : parent.toAbsolutePath().toString());
     }
 
-    public static boolean isOrIsDescendant(String a, String b) {
-        String sa = b == null ? null : normalise(b);
-        String sb = a == null ? null : normalise(a);
+    public static boolean isOrIsDescendant(String child, String parent) {
+        String sa = child == null ? null : normalise(child);
+        String sb = parent == null ? null : normalise(parent);
         if (sa != null && sb != null) {
-            return sb.startsWith(sa + SLASH);
+            return sa.equals(sb) || sa.startsWith(sb + SLASH);
+        }
+        return false;
+    }
+
+    public static boolean isDescendant(Path child, Path parent) {
+        return isDescendant(child == null ? null : child.toAbsolutePath().toString(),
+                parent == null ? null : parent.toAbsolutePath().toString());
+    }
+
+    public static boolean isDescendant(String child, String parent) {
+        String sa = child == null ? null : normalise(child);
+        String sb = parent == null ? null : normalise(parent);
+        if (sa != null && sb != null) {
+            return sa.startsWith(sb + SLASH);
         }
         return false;
     }
@@ -131,8 +145,9 @@ public class PathUtils {
         }
     }
 
-//    public static void main(String[] args) throws Throwable {
-//        System.out.println(Paths.get("a/b/c").relativize(Paths.get("a/b/c/d")));
-//    }
+    public static void main(String[] args) throws Throwable {
+        // System.out.println(Paths.get("a/b/c").relativize(Paths.get("a/b/c/d")));
+        // System.out.println(isOrIsDescendant("a/bb", "a/b"));
+    }
 
 }

@@ -4,7 +4,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import arc.utils.CanAbort;
-import resplat.mf.client.MFSession;
+import resplat.mf.client.session.MFSession;
 import resplat.mf.client.util.LoggingUtils;
 
 public abstract class AbstractTask implements Task {

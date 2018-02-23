@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<properties>
+	<server>
+		<host>mediaflux.vicnode.org.au</host>
+		<port>443</port>
+		<protocol>https</protocol>
+		<session>
+			<connectRetryTimes>5</connectRetryTimes>
+			<connectRetryInterval>1000</connectRetryInterval>
+			<executeRetryTimes>5</executeRetryTimes>
+			<executeRetryInterval>1000</executeRetryInterval>
+		</session>
+	</server>
+	<credential>
+		<app>mf-sync</app>
+		<domain>system</domain>
+		<user>wilson</user>
+		<password>change_me</password>
+		<token>xxxyyyzzz</token>
+		<sessionKey>xxxyyyzzz</sessionKey>
+	</credential>
+	<sync>
+		<settings>
+			<numberOfWorkers>8</numberOfWorkers>
+			<csumCheck>true</csumCheck>
+			<watchDaemon>false</watchDaemon>
+			<logDirectory>/tmp</logDirectory>
+			<includeEmptyFolder>false</includeEmptyFolder>
+			<notification>
+				<email>wliu5@unimelb.edu.au</email>
+			</notification>
+		</settings>
+		<job>
+			<directory>/path/to/src-directory1</directory>
+			<namespace parent="false">/path/to/dst-namespace1</namespace>
+			<include>regex</include>
+		</job>
+		<job>
+			<directory>/path/to/src-directory2</directory>
+			<namespace parent="false">/path/to/dst-namespace2</namespace>
+			<exclude>*.java</exclude>
+		</job>
+	</sync>
+</properties>

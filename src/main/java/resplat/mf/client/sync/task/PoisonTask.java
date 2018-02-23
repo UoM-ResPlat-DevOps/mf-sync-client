@@ -1,6 +1,6 @@
-package resplat.mf.client.task.sync;
+package resplat.mf.client.sync.task;
 
-import resplat.mf.client.MFSession;
+import resplat.mf.client.session.MFSession;
 
 public class PoisonTask extends SyncTask {
 

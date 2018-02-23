@@ -1,4 +1,4 @@
-package resplat.mf.client;
+package resplat.mf.client.session;
 
 import java.util.Arrays;
 import java.util.Timer;
@@ -20,14 +20,14 @@ public class MFSession {
     public static final int DEFAULT_EXECUTE_RETRY_TIMES = 1;
     public static final int DEFAULT_EXECUTE_RETRY_INTERVAL = 0;
 
-    private ConnectionSettings _settings;
+    private MFConnectionSettings _settings;
 
     private RemoteServer _rs;
     private AuthenticationDetails _auth;
     private String _sessionId;
     private Timer _timer;
 
-    public MFSession(ConnectionSettings settings) {
+    public MFSession(MFConnectionSettings settings) {
         _settings = settings;
     }
 
@@ -82,6 +82,17 @@ public class MFSession {
             return execute(cxn, service, args, input, output, abortable, _settings.executeRetryTimes());
         } finally {
             cxn.close();
+        }
+    }
+
+    public void testAuthentication() throws Throwable {
+        ServerClient.Connection cxn = null;
+        try {
+            cxn = connect();
+        } finally {
+            if (cxn != null) {
+                cxn.close();
+            }
         }
     }
 
@@ -157,6 +168,10 @@ public class MFSession {
             _timer.cancel();
             _timer = null;
         }
+    }
+
+    public String serverHost() {
+        return _settings.serverHost();
     }
 
 }

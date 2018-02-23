@@ -5,7 +5,7 @@
 JAR=$(dirname $0)/mf-sync-client.jar
 [[ ! -f $JAR ]] && echo "${JAR} is not found." >&2 && exit 2
 
-java -cp $JAR resplat.mf.client.MFSyncCLI --watch ${1+"$@"} > /dev/null &
+java -cp $JAR resplat.mf.client.sync.MFSyncCLI --watch ${1+"$@"} > /dev/null &
 
 PID=$!
 
@@ -17,6 +17,6 @@ if ps -p $PID > /dev/null; then
     exit 0
 else
     # pid does not exist, indicates there was error and the daemon did not start.
-    java -cp $JAR resplat.mf.client.MFSyncCLI --help
+    java -cp $JAR resplat.mf.client.sync.MFSyncCLI --help
     exit 1
 fi

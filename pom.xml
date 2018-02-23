@@ -50,7 +50,7 @@
 							</descriptorRefs>
 							<archive>
 								<manifest>
-									<mainClass>resplat.mf.client.MFSyncCLI</mainClass>
+									<mainClass>resplat.mf.client.sync.MFSyncCLI</mainClass>
 								</manifest>
 								<manifestEntries>
 									<App-Version>${project.version}</App-Version>

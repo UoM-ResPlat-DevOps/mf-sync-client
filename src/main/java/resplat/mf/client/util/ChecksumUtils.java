@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.nio.file.Path;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.zip.CRC32;
@@ -42,6 +43,34 @@ public class ChecksumUtils {
             break;
         }
         throw new IllegalArgumentException("Unknown checksum type: " + type);
+    }
+
+    public static long getCRC32Value(Path f) throws Throwable {
+        return getCRC32Value(f.toFile());
+    }
+
+    public static long getCRC32Value(File f) throws Throwable {
+        InputStream in = new BufferedInputStream(new FileInputStream(f));
+        try {
+            return getCRC32Value(in);
+        } finally {
+            in.close();
+        }
+    };
+
+    public static long getCRC32Value(InputStream in) throws Throwable {
+        CheckedInputStream cin = new CheckedInputStream(
+                (in instanceof BufferedInputStream) ? in : new BufferedInputStream(in), new CRC32());
+        byte[] buffer = new byte[1024];
+        try {
+            while (cin.read(buffer) != -1) {
+                // Read file in completely
+            }
+        } finally {
+            cin.close();
+            in.close();
+        }
+        return cin.getChecksum().getValue();
     }
 
     public static String getCRC32(File f) throws Throwable {
@@ -131,4 +160,5 @@ public class ChecksumUtils {
         BigInteger bi = new BigInteger(1, bytes);
         return String.format("%0" + (bytes.length << 1) + "x", bi);
     }
+
 }

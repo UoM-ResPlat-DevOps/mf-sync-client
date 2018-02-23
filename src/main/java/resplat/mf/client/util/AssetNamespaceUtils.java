@@ -3,7 +3,7 @@ package resplat.mf.client.util;
 import java.util.logging.Logger;
 
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.MFSession;
+import resplat.mf.client.session.MFSession;
 
 public class AssetNamespaceUtils {
 

@@ -1,9 +1,9 @@
-package resplat.mf.client.task.sync;
+package resplat.mf.client.sync.task;
 
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
-import resplat.mf.client.MFSession;
+import resplat.mf.client.session.MFSession;
 import resplat.mf.client.task.AbstractTask;
 import resplat.mf.client.util.PathUtils;
 import resplat.mf.client.util.StringUtils;

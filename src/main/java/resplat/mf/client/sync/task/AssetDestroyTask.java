@@ -1,10 +1,10 @@
-package resplat.mf.client.task.sync;
+package resplat.mf.client.sync.task;
 
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.MFSession;
+import resplat.mf.client.session.MFSession;
 import resplat.mf.client.util.PathUtils;
 
 public class AssetDestroyTask extends SyncTask {

@@ -1,12 +1,16 @@
-package resplat.mf.client;
+package resplat.mf.client.sync;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.nio.file.Files;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -15,30 +19,32 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+import arc.xml.XmlStringWriter;
 import resplat.mf.client.file.Filter;
-import resplat.mf.client.task.sync.AssetSyncTaskProducer;
-import resplat.mf.client.task.sync.FileSyncTaskProducer;
-import resplat.mf.client.task.sync.FileWatchTaskProducer;
-import resplat.mf.client.task.sync.PoisonTask;
-import resplat.mf.client.task.sync.SyncTask;
-import resplat.mf.client.task.sync.TaskConsumer;
-import resplat.mf.client.util.AssetNamespaceUtils;
+import resplat.mf.client.session.MFSession;
+import resplat.mf.client.sync.task.FileSyncTaskProducer;
+import resplat.mf.client.sync.task.FileUploadListener;
+import resplat.mf.client.sync.task.FileWatchTaskProducer;
+import resplat.mf.client.sync.task.PoisonTask;
+import resplat.mf.client.sync.task.SyncTask;
+import resplat.mf.client.sync.task.TaskConsumer;
 import resplat.mf.client.util.LoggingUtils;
-import resplat.mf.client.util.PathUtils;
 import resplat.mf.client.util.ThrowableUtils;
 
-public class MFSync implements Runnable {
+public class MFSync implements Runnable, FileUploadListener {
 
     public static final String APP_NAME = "mf-sync";
 
     public static final String PROPERTIES_FILE = new StringBuilder()
-            .append(System.getProperty("user.home").replace('\\', '/')).append("/.mediaflux/mf-sync.properties")
+            .append(System.getProperty("user.home").replace('\\', '/')).append("/.mediaflux/mf-sync-properties.xml")
             .toString();
 
     public static final int MB = 1000000;
@@ -50,39 +56,35 @@ public class MFSync implements Runnable {
 
     public static final Path DEFAULT_LOG_DIR = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
 
-    private MFSession _session;
-    private Path _directory;
-    private String _parentNamespace;
-    private String _namespace;
+    public static final int MAX_FAILED_UPLOADS = 100;
 
-    private Path _logDir;
+    private MFSession _session;
+
+    private MFSyncSettings _settings;
+
     private Logger _logger;
 
     private BlockingQueue<SyncTask> _queue;
 
     private ExecutorService _producerThreadPool;
 
-    private int _nbConsumers;
     private ExecutorService _consumerThreadPool;
+
     private List<TaskConsumer> _consumers;
 
-    private boolean _watch;
-    private boolean _syncLocalDeletion;
+    private AtomicInteger _nbUploaded = new AtomicInteger();
+    private AtomicInteger _nbFailed = new AtomicInteger();
+    private AtomicInteger _nbSkipped = new AtomicInteger();
+    private AtomicLong _bytesUploaded = new AtomicLong();
+    private List<Path> _failedFiles = Collections.synchronizedList(new ArrayList<Path>());
 
-    public MFSync(MFSyncSettings settings) {
-        this(new MFSession(settings.setApp(APP_NAME)), settings.directory(), settings.parentNamespace(),
-                settings.numberOfThreads(), settings.watch(), settings.syncLocalDeletion(), settings.logDirectory());
-    }
+    private long _startTime;
 
-    public MFSync(MFSession session, Path directory, String parentNamespace, int nbConsumers, boolean watch,
-            boolean syncLocalDeletion, Path logDir) {
+    public MFSync(MFSession session, MFSyncSettings settings) {
         _session = session;
-        _directory = directory;
-        _parentNamespace = parentNamespace;
-        _namespace = PathUtils.join(_parentNamespace, _directory.getFileName().toString());
+        _settings = settings;
 
-        _logDir = logDir == null ? DEFAULT_LOG_DIR : logDir.toAbsolutePath();
-        _logger = createLogger(_logDir, APP_NAME);
+        _logger = createLogger(_settings.logDirectory(), APP_NAME);
 
         _queue = new LinkedBlockingQueue<SyncTask>();
 
@@ -94,8 +96,7 @@ public class MFSync implements Runnable {
             }
         });
 
-        _nbConsumers = nbConsumers;
-        _consumerThreadPool = Executors.newFixedThreadPool(nbConsumers, new ThreadFactory() {
+        _consumerThreadPool = Executors.newFixedThreadPool(_settings.numberOfWorkers(), new ThreadFactory() {
 
             @Override
             public Thread newThread(Runnable r) {
@@ -103,45 +104,17 @@ public class MFSync implements Runnable {
             }
         });
 
-        _watch = watch;
-        _syncLocalDeletion = syncLocalDeletion;
-
-    }
-
-    public boolean assetNamespaceExists(String namespace) throws Throwable {
-        return AssetNamespaceUtils.assetNamespaceExists(_session, _parentNamespace);
     }
 
     @Override
     public void run() {
         try {
+            _startTime = System.currentTimeMillis();
+
             /*
              * run server.ping periodically to keep the session alive
              */
             _session.startPingServerPeriodically(60000);
-
-            /*
-             * check if directory exists
-             */
-            if (!Files.exists(_directory)) {
-                throw new IllegalArgumentException("Directory: '" + _directory + "' does not exist.");
-            }
-
-            /*
-             * check if parent namespace exists
-             */
-            if (!AssetNamespaceUtils.assetNamespaceExists(_session, _parentNamespace)) {
-                throw new IllegalArgumentException(
-                        "Destination parent asset namespace: '" + _parentNamespace + "' does not exist.");
-            }
-
-            /*
-             * create corresponding namespace if not exist.
-             */
-            AssetNamespaceUtils.createAssetNamespace(_session, _namespace, _logger);
-
-            LoggingUtils.logInfo(_logger,
-                    "Syncing from directory: '" + _directory + "' to asset namespace: '" + _namespace + "'");
 
             Filter logFileFilter = new Filter() {
 
@@ -169,23 +142,24 @@ public class MFSync implements Runnable {
              * Run FileSyncTaskProducer: go through the files in the local
              * directory, and upload them to the remote asset namespace.
              */
-            _producerThreadPool.submit(new FileSyncTaskProducer(_session, _logger, _directory, _namespace, true, _queue)
-                    .setFilter(logFileFilter));
-
-            /*
-             * Run AssetSyncTaskProducer: go through the assets in the remote
-             * asset namespace, and delete the assets do not exist locally
-             */
-            if (_syncLocalDeletion) {
-                _producerThreadPool
-                        .submit(new AssetSyncTaskProducer(_session, _logger, _directory, _namespace, _queue));
-            }
+            _producerThreadPool.submit(
+                    new FileSyncTaskProducer(_session, _logger, _settings, this, _queue).setFilter(logFileFilter));
+// @formatter:off
+//            /*
+//             * Run AssetSyncTaskProducer: go through the assets in the remote
+//             * asset namespace, and delete the assets do not exist locally
+//             */
+//            if (_syncLocalDeletion) {
+//                _producerThreadPool
+//                        .submit(new AssetSyncTaskProducer(_session, _logger, _directory, _namespace, _queue));
+//            }
+// @formatter:on
 
             /*
              * Start consumer threads.
              */
-            _consumers = new ArrayList<TaskConsumer>(_nbConsumers);
-            for (int i = 0; i < _nbConsumers; i++) {
+            _consumers = new ArrayList<TaskConsumer>(_settings.numberOfWorkers());
+            for (int i = 0; i < _settings.numberOfWorkers(); i++) {
                 TaskConsumer consumer = new TaskConsumer(_queue, _logger);
                 _consumers.add(consumer);
                 _consumerThreadPool.submit(consumer);
@@ -195,24 +169,88 @@ public class MFSync implements Runnable {
              * Watch the changes in the local directory, upload files to remote
              * asset namespace...
              */
-            if (_watch) {
+            if (_settings.watchDaemon()) {
                 _producerThreadPool.submit(
-                        new FileWatchTaskProducer(_session, _logger, _directory, _namespace, _queue, _syncLocalDeletion)
-                                .setFilter(logFileFilter));
+                        new FileWatchTaskProducer(_session, _logger, _settings, this, _queue).setFilter(logFileFilter));
             } else {
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-                for (int i = 0; i < _nbConsumers; i++) {
+                int nbWorkers = _settings.numberOfWorkers();
+                for (int i = 0; i < nbWorkers; i++) {
                     _queue.put(new PoisonTask());
                 }
                 _consumerThreadPool.shutdown();
                 _consumerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+                printSummary(System.out);
+                mailSummary();
                 _session.stopPingServerPeriodically();
             }
 
         } catch (Throwable e) {
             LoggingUtils.logError(_logger, e);
         }
+    }
+
+    private void mailSummary() throws Throwable {
+        if (_settings.hasNotificationEmailAddresses()) {
+            XmlStringWriter w = new XmlStringWriter();
+            w.add("from", MFSync.APP_NAME + "@" + _session.serverHost());
+            Collection<String> emailAddresses = _settings.notificationEmailAddresses();
+            for (String emailAddress : emailAddresses) {
+                w.add("to", emailAddress);
+            }
+            w.add("subject", MFSync.APP_NAME.toUpperCase() + " Summary");
+            w.add("body", getSummary());
+            _session.execute("mail.send", w.document(), null, null);
+        }
+    }
+
+    private String getSummary() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        try {
+            printSummary(ps);
+            return baos.toString();
+        } finally {
+            ps.close();
+            baos.close();
+        }
+    }
+
+    private void printSummary(PrintStream ps) {
+        _settings.print(ps);
+
+        ps.println();
+        ps.println("Summary:");
+        int uploaded = _nbUploaded.get();
+        int failed = _nbFailed.get();
+        int skipped = _nbSkipped.get();
+        int total = uploaded + failed + skipped;
+        long totalBytes = _bytesUploaded.get();
+
+        ps.println(String.format("    number-of-uploaded-files: %16d", uploaded));
+        ps.println(String.format("      number-of-failed-files: %16d", failed));
+        ps.println(String.format("     number-of-skipped-files: %16d", skipped));
+        ps.println(String.format("       total-processed-files: %16d", total));
+        ps.println(String.format("        total-uploaded-bytes: %16d", totalBytes));
+
+        if (!_settings.watchDaemon()) {
+            double speed = totalBytes == 0 ? 0.0 : ((double) totalBytes / 1000000.0)/((System.currentTimeMillis()-_startTime)/1000.0);
+            ps.println(String.format("                upload-speed: %16.3f MB/s", speed));
+        }
+        ps.println();
+        synchronized (_failedFiles) {
+            if (!_failedFiles.isEmpty()) {
+                ps.println("    Failed Files:");
+                for (Path f : _failedFiles) {
+                    ps.println(String.format("        %s", f.toString()));
+                }
+                if (_failedFiles.size() < failed) {
+                    ps.println("        ... ... ...");
+                }
+            }
+        }
+
     }
 
     public void start() {
@@ -230,7 +268,7 @@ public class MFSync implements Runnable {
     }
 
     protected String logFilePrefix() {
-        return Paths.get(_logDir.toString(), APP_NAME).toString();
+        return Paths.get(_settings.logDirectory().toString(), APP_NAME).toString();
     }
 
     public void log(Level level, String message, Throwable thrown) {
@@ -300,6 +338,31 @@ public class MFSync implements Runnable {
         } catch (Throwable t) {
             throw new RuntimeException("Failed to create logger: " + t.getMessage(), t);
         }
+    }
+
+    @Override
+    public void fileUploadCompleted(Path file, String assetId) {
+        _nbUploaded.incrementAndGet();
+    }
+
+    @Override
+    public void fileUploadFailed(Path file) {
+        _nbFailed.incrementAndGet();
+        synchronized (_failedFiles) {
+            if (_failedFiles.size() < MAX_FAILED_UPLOADS) {
+                _failedFiles.add(file);
+            }
+        }
+    }
+
+    @Override
+    public void fileUploadSkipped(Path file) {
+        _nbSkipped.incrementAndGet();
+    }
+
+    @Override
+    public void fileUploadProgressed(long bytesUploaded) {
+        _bytesUploaded.addAndGet(bytesUploaded);
     }
 
 }
