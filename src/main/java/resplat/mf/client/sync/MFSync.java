@@ -232,7 +232,7 @@ public class MFSync implements Runnable, FileUploadListener {
         ps.println(String.format("      number-of-failed-files: %16d", failed));
         ps.println(String.format("     number-of-skipped-files: %16d", skipped));
         ps.println(String.format("       total-processed-files: %16d", total));
-        ps.println(String.format("        total-uploaded-bytes: %16d", totalBytes));
+        ps.println(String.format("        total-uploaded-bytes: %16d bytes", totalBytes));
 
         if (!_settings.watchDaemon()) {
             double speed = totalBytes == 0 ? 0.0 : ((double) totalBytes / 1000000.0)/((System.currentTimeMillis()-_startTime)/1000.0);
