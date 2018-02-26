@@ -1,9 +1,14 @@
 package resplat.mf.client.sync;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -58,6 +63,8 @@ public class MFSync implements Runnable, FileUploadListener {
 
     public static final int MAX_FAILED_UPLOADS = 100;
 
+    public static final int DEFAULT_DAEMON_PORT = 9761;
+
     private MFSession _session;
 
     private MFSyncSettings _settings;
@@ -79,6 +86,8 @@ public class MFSync implements Runnable, FileUploadListener {
     private List<Path> _failedFiles = Collections.synchronizedList(new ArrayList<Path>());
 
     private long _startTime;
+
+    private Thread _daemonThread;
 
     public MFSync(MFSession session, MFSyncSettings settings) {
         _session = session;
@@ -172,6 +181,7 @@ public class MFSync implements Runnable, FileUploadListener {
             if (_settings.watchDaemon()) {
                 _producerThreadPool.submit(
                         new FileWatchTaskProducer(_session, _logger, _settings, this, _queue).setFilter(logFileFilter));
+                startDaemon();
             } else {
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -235,7 +245,8 @@ public class MFSync implements Runnable, FileUploadListener {
         ps.println(String.format("        total-uploaded-bytes: %16d bytes", totalBytes));
 
         if (!_settings.watchDaemon()) {
-            double speed = totalBytes == 0 ? 0.0 : ((double) totalBytes / 1000000.0)/((System.currentTimeMillis()-_startTime)/1000.0);
+            double speed = totalBytes == 0 ? 0.0
+                    : ((double) totalBytes / 1000000.0) / ((System.currentTimeMillis() - _startTime) / 1000.0);
             ps.println(String.format("                upload-speed: %16.3f MB/s", speed));
         }
         ps.println();
@@ -265,6 +276,58 @@ public class MFSync implements Runnable, FileUploadListener {
             _producerThreadPool.shutdownNow();
         }
         _session.stopPingServerPeriodically();
+        if (_settings.watchDaemon() && _daemonThread != null && !_daemonThread.isInterrupted()) {
+            stopDaemon();
+        }
+    }
+
+    public void startDaemon() {
+        if (_daemonThread == null) {
+            _daemonThread = new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+                    try {
+                        ServerSocket listener = new ServerSocket(_settings.daemonPort(), 0,
+                                InetAddress.getByName(null));
+                        try {
+                            outerloop: while (!Thread.interrupted()) {
+                                Socket client = listener.accept();
+                                try {
+                                    BufferedReader in = new BufferedReader(
+                                            new InputStreamReader(client.getInputStream()));
+                                    while (!Thread.interrupted()) {
+                                        String cmd = in.readLine();
+                                        if ("stop".equalsIgnoreCase(cmd)) {
+                                            stop();
+                                            break outerloop;
+                                        } else if ("status".equalsIgnoreCase(cmd)) {
+                                            printSummary(new PrintStream(client.getOutputStream(), true));
+                                            break;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                } finally {
+                                    client.close();
+                                }
+                            }
+                        } finally {
+                            listener.close();
+                        }
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, "mf-sync daemon listener");
+            _daemonThread.start();
+        }
+    }
+
+    public void stopDaemon() {
+        if (_daemonThread != null) {
+            _daemonThread.interrupt();
+        }
     }
 
     protected String logFilePrefix() {

@@ -136,6 +136,7 @@ public class MFSyncSettings {
 
     private int _numberOfWorkers = 1;
     private boolean _watchDaemon = false;
+    private int _daemonPort = MFSync.DEFAULT_DAEMON_PORT;
     private boolean _csumCheck = false;
     private boolean _excludeEmptyFolder = false;
     private Path _logDirectory = MFSync.DEFAULT_LOG_DIR;
@@ -173,6 +174,7 @@ public class MFSyncSettings {
         }
         _numberOfWorkers = se.intValue("settings/numberOfWorkers", 1);
         _watchDaemon = se.booleanValue("settings/watchDaemon", false);
+        _daemonPort = se.intValue("settings/daemonPort", MFSync.DEFAULT_DAEMON_PORT);
         _csumCheck = se.booleanValue("settings/csumCheck", false);
         _excludeEmptyFolder = se.booleanValue("settings/excludeEmptyFolder", false);
         _logDirectory = Paths.get(se.stringValue("settings/logDirectory", System.getProperty("user.dir")));
@@ -247,6 +249,15 @@ public class MFSyncSettings {
 
     public boolean watchDaemon() {
         return _watchDaemon;
+    }
+
+    public MFSyncSettings setDaemonPort(int daemonPort) {
+        _daemonPort = daemonPort;
+        return this;
+    }
+
+    public int daemonPort() {
+        return _daemonPort;
     }
 
     public MFSyncSettings setCsumCheck(boolean csumCheck) {

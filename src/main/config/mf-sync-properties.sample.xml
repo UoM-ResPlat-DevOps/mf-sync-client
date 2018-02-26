@@ -24,6 +24,7 @@
 			<numberOfWorkers>8</numberOfWorkers>
 			<csumCheck>true</csumCheck>
 			<watchDaemon>false</watchDaemon>
+			<daemonPort>9761</daemonPort>
 			<logDirectory>/tmp</logDirectory>
 			<includeEmptyFolder>false</includeEmptyFolder>
 			<notification>
