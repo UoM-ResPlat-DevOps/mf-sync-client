@@ -48,6 +48,9 @@ public class FileUploadTask extends SyncTask {
     @Override
     public void execute(MFSession session) throws Throwable {
         try {
+            if (_ul != null) {
+                _ul.fileUploadStarted(_file);
+            }
             PosixAttributes fileAttrs = null;
             long fileSize = Files.size(_file);
             String assetPath = PathUtils.join(rootNamespace(), relativePath(rootDirectory(), _file));

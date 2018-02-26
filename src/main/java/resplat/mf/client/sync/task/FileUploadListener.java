@@ -3,6 +3,8 @@ package resplat.mf.client.sync.task;
 import java.nio.file.Path;
 
 public interface FileUploadListener {
+    
+    void fileUploadStarted(Path file);
 
     void fileUploadCompleted(Path file, String assetId);
 

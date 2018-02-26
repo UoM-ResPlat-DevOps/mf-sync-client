@@ -372,6 +372,9 @@ public class MFSyncSettings {
         }
         ps.println("    number-of-workers:  " + _numberOfWorkers);
         ps.println("    daemon: " + _watchDaemon);
+        if (_watchDaemon) {
+            ps.println("    daemon-port: " + _daemonPort);
+        }
         ps.println("    csum-check: " + _csumCheck);
         ps.println("    exclude-empty-folder: " + _excludeEmptyFolder);
         ps.println("    log-directory: " + _logDirectory);

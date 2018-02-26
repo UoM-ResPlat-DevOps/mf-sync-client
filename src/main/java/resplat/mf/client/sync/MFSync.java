@@ -17,7 +17,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,6 +66,8 @@ public class MFSync implements Runnable, FileUploadListener {
 
     public static final int MAX_FAILED_UPLOADS = 100;
 
+    public static final int MAX_ACTIVITIES = 100;
+
     public static final int DEFAULT_DAEMON_PORT = 9761;
 
     private MFSession _session;
@@ -84,6 +89,14 @@ public class MFSync implements Runnable, FileUploadListener {
     private AtomicInteger _nbSkipped = new AtomicInteger();
     private AtomicLong _bytesUploaded = new AtomicLong();
     private List<Path> _failedFiles = Collections.synchronizedList(new ArrayList<Path>());
+    private Map<Long, Path> _activities = Collections.synchronizedMap(new LinkedHashMap<Long, Path>() {
+        private static final long serialVersionUID = -8971798382879040126L;
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Path> eldest) {
+            return this.size() > MAX_ACTIVITIES;
+        }
+    });
 
     private long _startTime;
 
@@ -250,9 +263,21 @@ public class MFSync implements Runnable, FileUploadListener {
             ps.println(String.format("                upload-speed: %16.3f MB/s", speed));
         }
         ps.println();
+        synchronized (_activities) {
+            if (!_activities.isEmpty()) {
+                ps.println("    Recent activities:");
+                Set<Long> times = _activities.keySet();
+                for (Long time : times) {
+                    Path file = _activities.get(time);
+                    ps.println(String.format("        %s: uploading '%s'",
+                            new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(time)), file.toString()));
+                }
+            }
+        }
+        ps.println();
         synchronized (_failedFiles) {
             if (!_failedFiles.isEmpty()) {
-                ps.println("    Failed Files:");
+                ps.println("    Failed files:");
                 for (Path f : _failedFiles) {
                     ps.println(String.format("        %s", f.toString()));
                 }
@@ -426,6 +451,13 @@ public class MFSync implements Runnable, FileUploadListener {
     @Override
     public void fileUploadProgressed(long bytesUploaded) {
         _bytesUploaded.addAndGet(bytesUploaded);
+    }
+
+    @Override
+    public void fileUploadStarted(Path file) {
+        synchronized (_activities) {
+            _activities.put(System.currentTimeMillis(), file);
+        }
     }
 
 }
