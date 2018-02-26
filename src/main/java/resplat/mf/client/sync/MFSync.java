@@ -20,7 +20,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -191,10 +190,12 @@ public class MFSync implements Runnable, FileUploadListener {
              * Watch the changes in the local directory, upload files to remote
              * asset namespace...
              */
+            // starts listener
+            startDaemon();
+
             if (_settings.watchDaemon()) {
                 _producerThreadPool.submit(
                         new FileWatchTaskProducer(_session, _logger, _settings, this, _queue).setFilter(logFileFilter));
-                startDaemon();
             } else {
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -207,6 +208,7 @@ public class MFSync implements Runnable, FileUploadListener {
                 printSummary(System.out);
                 mailSummary();
                 _session.stopPingServerPeriodically();
+                stopDaemon();
             }
 
         } catch (Throwable e) {
@@ -266,12 +268,13 @@ public class MFSync implements Runnable, FileUploadListener {
         synchronized (_activities) {
             if (!_activities.isEmpty()) {
                 ps.println("    Recent activities:");
-                Set<Long> times = _activities.keySet();
-                for (Long time : times) {
+                _activities.keySet().stream().sorted((lv1, lv2) -> {
+                    return Long.compare(lv2, lv1);
+                }).forEach(time -> {
                     Path file = _activities.get(time);
                     ps.println(String.format("        %s: uploading '%s'",
                             new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date(time)), file.toString()));
-                }
+                });
             }
         }
         ps.println();
