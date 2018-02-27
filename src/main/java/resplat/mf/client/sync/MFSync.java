@@ -190,12 +190,14 @@ public class MFSync implements Runnable, FileUploadListener {
              * Watch the changes in the local directory, upload files to remote
              * asset namespace...
              */
-            // starts listener
-            startDaemon();
 
             if (_settings.watchDaemon()) {
+                // starts listener
+                startDaemon();
+
                 _producerThreadPool.submit(
                         new FileWatchTaskProducer(_session, _logger, _settings, this, _queue).setFilter(logFileFilter));
+
             } else {
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
@@ -208,7 +210,6 @@ public class MFSync implements Runnable, FileUploadListener {
                 printSummary(System.out);
                 mailSummary();
                 _session.stopPingServerPeriodically();
-                stopDaemon();
             }
 
         } catch (Throwable e) {
