@@ -1,6 +1,7 @@
 package resplat.mf.client.sync.task;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import resplat.mf.client.util.LoggingUtils;
@@ -17,7 +18,7 @@ public class TaskConsumer implements Runnable {
 
     public TaskConsumer(BlockingQueue<SyncTask> queue, Logger logger) {
         _queue = queue;
-        _logger = logger;
+        _logger = logger == null ? LoggingUtils.createConsoleLogger() : logger;
     }
 
     @Override
@@ -27,7 +28,7 @@ public class TaskConsumer implements Runnable {
                 // wait for task from queue
                 _currentTask = _queue.take();
                 if (_currentTask instanceof PoisonTask) {
-                    LoggingUtils.logInfo(_logger, "Stopping consumer thread...");
+                    _logger.info("Stopping consumer thread...");
                     break;
                 }
                 // execute task
@@ -35,10 +36,10 @@ public class TaskConsumer implements Runnable {
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            LoggingUtils.logInfo(_logger, "Interrupted '" + Thread.currentThread().getName() + "' thread(id="
+            _logger.info("Interrupted '" + Thread.currentThread().getName() + "' thread(id="
                     + Thread.currentThread().getId() + ").");
         } catch (Throwable e) {
-            LoggingUtils.logError(_logger, e);
+            _logger.log(Level.SEVERE, e.getMessage(), e);
         }
     }
 

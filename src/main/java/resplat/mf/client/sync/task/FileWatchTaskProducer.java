@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import arc.utils.CanAbort;
@@ -51,6 +52,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
     private boolean _syncDeletion = false;
 
     private Logger _logger;
+
     private BlockingQueue<SyncTask> _queue;
 
     private WatchService _watcher;
@@ -70,7 +72,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
 
         _syncDeletion = false;
 
-        _logger = logger;
+        _logger = logger == null ? LoggingUtils.createConsoleLogger() : logger;
 
         _queue = queue;
 
@@ -85,10 +87,10 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
         WatchKey key = dir.register(_watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
         Path prev = _watchKeys.get(key);
         if (prev == null) {
-            LoggingUtils.logInfo(_logger, String.format("Started watching directory: %s", dir));
+            _logger.info(String.format("Started watching directory: %s", dir));
         } else {
             if (!dir.equals(prev)) {
-                LoggingUtils.logInfo(_logger, String.format("Updated watching directory: %s -> %s", prev, dir));
+                _logger.info(String.format("Updated watching directory: %s -> %s", prev, dir));
             }
         }
         _watchKeys.put(key, dir);
@@ -112,13 +114,13 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
     private void processEvents(WatchKey key) throws Throwable {
         Path dir = _watchKeys.get(key);
         if (dir == null) {
-            LoggingUtils.logError(_logger, "WatchKey is not recognized!");
+            _logger.severe("WatchKey is not recognized!");
             return;
         }
         for (WatchEvent<?> event : key.pollEvents()) {
             WatchEvent.Kind<?> kind = event.kind();
             if (kind == OVERFLOW) {
-                LoggingUtils.logWarning(_logger, "Encountered OVERFLOW event.");
+                _logger.warning("Encountered OVERFLOW event.");
                 continue;
             }
 
@@ -130,7 +132,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             Path child = dir.resolve(name);
 
             // log event
-            LoggingUtils.logInfo(_logger, String.format("Processing event: %s: %s", ev.kind().name(), child));
+            _logger.info(String.format("Processing event: %s: %s", ev.kind().name(), child));
 
             if (kind == ENTRY_DELETE) {
                 if (_syncDeletion) {
@@ -144,7 +146,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             boolean isDirectory = Files.isDirectory(child, NOFOLLOW_LINKS);
             boolean isRegularFile = Files.isRegularFile(child, NOFOLLOW_LINKS);
             if (!isDirectory && !isRegularFile) {
-                LoggingUtils.logInfo(_logger, "Skipped: " + child + ". Not a directory or regular file.");
+                _logger.info("Skipped: " + child + ". Not a directory or regular file.");
                 continue;
             }
 
@@ -155,7 +157,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                     try {
                         registerAll(child);
                     } catch (IOException ioe) {
-                        LoggingUtils.logError(_logger, "Failed to register: " + child, ioe);
+                        _logger.log(Level.SEVERE, "Failed to register: " + child, ioe);
                     }
                     // upload the directory (It may be empty if the event
                     // was triggered by mkdir; Otherwise it may contains
@@ -186,7 +188,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                     // namespace
                     final String namespace = PathUtils.join(job.namespace(),
                             SyncTask.relativePath(job.directory(), path));
-                    LoggingUtils.logInfo(_logger, "Destroying namespace: '" + namespace + "'");
+                    _logger.info("Destroying namespace: '" + namespace + "'");
                     softDestroyAllAssets(_session, namespace);
                 }
                 boolean assetExists = exists.getValue();
@@ -259,10 +261,10 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
         } catch (Throwable e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
-                LoggingUtils.logInfo(_logger, "Interrupted '" + Thread.currentThread().getName() + "' thread(id="
+                _logger.info("Interrupted '" + Thread.currentThread().getName() + "' thread(id="
                         + Thread.currentThread().getId() + ").");
             } else {
-                LoggingUtils.logError(_logger, e);
+                _logger.log(Level.SEVERE, e.getMessage(), e);
             }
         }
     }

@@ -10,14 +10,18 @@ public class AssetNamespaceUtils {
     public static void createAssetNamespace(MFSession session, String ns, Logger logger) throws Throwable {
         if (!assetNamespaceExists(session, ns)) {
             try {
-                LoggingUtils.logInfo(logger, "Creating asset namespace: '" + ns + "'");
+                if (logger != null) {
+                    logger.info("Creating asset namespace: '" + ns + "'");
+                }
                 XmlStringWriter w = new XmlStringWriter();
                 w.add("namespace", ns);
                 session.execute("asset.namespace.create", w.document(), null, null);
             } catch (Throwable e) {
                 String msg = e.getMessage();
                 if (msg != null && (msg.contains("already exists") || msg.contains("not accessible"))) {
-                    LoggingUtils.logInfo(logger, "Asset namespace: '" + ns + "' already exists.");
+                    if (logger != null) {
+                        logger.info("Asset namespace: '" + ns + "' already exists.");
+                    }
                 } else {
                     throw e;
                 }

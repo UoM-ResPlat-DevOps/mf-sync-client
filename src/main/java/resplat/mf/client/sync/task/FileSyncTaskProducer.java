@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 import resplat.mf.client.file.Filter;
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.sync.MFSyncSettings;
-import resplat.mf.client.util.LoggingUtils;
 
 public class FileSyncTaskProducer implements Runnable {
 
@@ -41,7 +40,9 @@ public class FileSyncTaskProducer implements Runnable {
         try {
             execute();
         } catch (Throwable e) {
-            LoggingUtils.log(_logger, Level.SEVERE, e.getMessage(), e);
+            if (_logger != null) {
+                _logger.log(Level.SEVERE, e.getMessage(), e);
+            }
         }
     }
 
@@ -73,21 +74,23 @@ public class FileSyncTaskProducer implements Runnable {
                         Thread.currentThread().interrupt();
                         return FileVisitResult.TERMINATE;
                     }
-                    LoggingUtils.log(_logger, Level.SEVERE, e.getMessage(), e);
+                    if (_logger != null) {
+                        _logger.log(Level.SEVERE, e.getMessage(), e);
+                    }
                 }
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
             public FileVisitResult visitFileFailed(Path file, IOException ioe) {
-                LoggingUtils.log(_logger, Level.SEVERE, "Failed to access file: " + file, ioe);
+                _logger.log(Level.SEVERE, "Failed to access file: " + file, ioe);
                 return FileVisitResult.CONTINUE;
             }
 
             @Override
             public FileVisitResult postVisitDirectory(Path dir, IOException ioe) {
                 if (ioe != null) {
-                    LoggingUtils.log(_logger, Level.SEVERE, ioe.getMessage(), ioe);
+                    _logger.log(Level.SEVERE, ioe.getMessage(), ioe);
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -107,7 +110,7 @@ public class FileSyncTaskProducer implements Runnable {
                             Thread.currentThread().interrupt();
                             return FileVisitResult.TERMINATE;
                         }
-                        LoggingUtils.log(_logger, Level.SEVERE, e.getMessage(), e);
+                        _logger.log(Level.SEVERE, e.getMessage(), e);
                     }
                     return FileVisitResult.CONTINUE;
                 } else {

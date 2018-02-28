@@ -21,7 +21,7 @@ public abstract class AbstractTask implements Task {
 
     protected AbstractTask(MFSession session, Logger logger) {
         _session = session;
-        _logger = logger;
+        _logger = logger == null ? LoggingUtils.createConsoleLogger() : logger;
         _state = State.PENDING;
         _workTotal = -1;
         _workProgressed = 0;
@@ -36,7 +36,7 @@ public abstract class AbstractTask implements Task {
     }
 
     @Override
-    public Logger logger() {
+    public final Logger logger() {
         return _logger;
     }
 
@@ -69,8 +69,8 @@ public abstract class AbstractTask implements Task {
     }
 
     @Override
-    public void log(Level level, String message, Throwable thrown) {
-        LoggingUtils.log(logger(), level, message, thrown);
+    public final void log(Level level, String message, Throwable thrown) {
+        _logger.log(level, message, thrown);
     }
 
     @Override
@@ -135,10 +135,6 @@ public abstract class AbstractTask implements Task {
             return ((double) workProgressed()) / ((double) workTotal());
         }
         return 0;
-    }
-
-    protected void setLogger(Logger logger) {
-        _logger = logger;
     }
 
     protected void setCurrentOperation(String currentOp) {

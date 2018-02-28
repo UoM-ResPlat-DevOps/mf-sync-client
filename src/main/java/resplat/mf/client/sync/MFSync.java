@@ -2,13 +2,13 @@ package resplat.mf.client.sync;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -28,10 +28,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
 import java.util.logging.Level;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import arc.xml.XmlStringWriter;
@@ -43,23 +40,16 @@ import resplat.mf.client.sync.task.FileWatchTaskProducer;
 import resplat.mf.client.sync.task.PoisonTask;
 import resplat.mf.client.sync.task.SyncTask;
 import resplat.mf.client.sync.task.TaskConsumer;
+import resplat.mf.client.task.Loggable;
 import resplat.mf.client.util.LoggingUtils;
-import resplat.mf.client.util.ThrowableUtils;
 
-public class MFSync implements Runnable, FileUploadListener {
+public class MFSync implements Runnable, Loggable, FileUploadListener {
 
     public static final String APP_NAME = "mf-sync";
 
     public static final String PROPERTIES_FILE = new StringBuilder()
             .append(System.getProperty("user.home").replace('\\', '/')).append("/.mediaflux/mf-sync-properties.xml")
             .toString();
-
-    public static final int MB = 1000000;
-    public static final int LOG_FILE_SIZE_LIMIT = 100 * MB;
-    public static final int LOG_FILE_COUNT = 2;
-    public static final String LOG_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
-    public static final boolean IS_WINDOWS = System.getProperty("os.name", "generic").toLowerCase()
-            .indexOf("windows") >= 0;
 
     public static final Path DEFAULT_LOG_DIR = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
 
@@ -101,11 +91,17 @@ public class MFSync implements Runnable, FileUploadListener {
 
     private Thread _daemonThread;
 
+    private ServerSocket _listenerSocket;
+
     public MFSync(MFSession session, MFSyncSettings settings) {
         _session = session;
         _settings = settings;
 
-        _logger = createLogger(_settings.logDirectory(), APP_NAME);
+        try {
+            _logger = LoggingUtils.createFileAndConsoleLogger(_settings.logDirectory(), APP_NAME);
+        } catch (Throwable e) {
+            throw new RuntimeException("Failed to create logger: " + e.getMessage(), e);
+        }
 
         _queue = new LinkedBlockingQueue<SyncTask>();
 
@@ -191,14 +187,15 @@ public class MFSync implements Runnable, FileUploadListener {
              * asset namespace...
              */
 
-            if (_settings.watchDaemon()) {
-                // starts listener
-                startDaemon();
+            // starts listener
+            startDaemon();
 
+            if (_settings.watchDaemon()) {
                 _producerThreadPool.submit(
                         new FileWatchTaskProducer(_session, _logger, _settings, this, _queue).setFilter(logFileFilter));
 
             } else {
+
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
                 int nbWorkers = _settings.numberOfWorkers();
@@ -210,10 +207,11 @@ public class MFSync implements Runnable, FileUploadListener {
                 printSummary(System.out);
                 mailSummary();
                 _session.stopPingServerPeriodically();
+                stopDaemon();
             }
 
         } catch (Throwable e) {
-            LoggingUtils.logError(_logger, e);
+            logError(e);
         }
     }
 
@@ -317,11 +315,10 @@ public class MFSync implements Runnable, FileUploadListener {
                 @Override
                 public void run() {
                     try {
-                        ServerSocket listener = new ServerSocket(_settings.daemonPort(), 0,
-                                InetAddress.getByName(null));
+                        _listenerSocket = new ServerSocket(_settings.daemonPort(), 0, InetAddress.getByName(null));
                         try {
-                            outerloop: while (!Thread.interrupted()) {
-                                Socket client = listener.accept();
+                            outerloop: while (!Thread.interrupted() && !_listenerSocket.isClosed()) {
+                                Socket client = _listenerSocket.accept();
                                 try {
                                     BufferedReader in = new BufferedReader(
                                             new InputStreamReader(client.getInputStream()));
@@ -341,11 +338,13 @@ public class MFSync implements Runnable, FileUploadListener {
                                     client.close();
                                 }
                             }
+                        } catch (SocketException se) {
+                            logInfo("Listening socket closed!");
                         } finally {
-                            listener.close();
+                            _listenerSocket.close();
                         }
                     } catch (Throwable e) {
-                        e.printStackTrace();
+                        logError(e);
                     }
                 }
             }, "mf-sync daemon listener");
@@ -355,7 +354,13 @@ public class MFSync implements Runnable, FileUploadListener {
 
     public void stopDaemon() {
         if (_daemonThread != null) {
-            _daemonThread.interrupt();
+            try {
+                _listenerSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                _daemonThread.interrupt();
+            }
         }
     }
 
@@ -364,7 +369,7 @@ public class MFSync implements Runnable, FileUploadListener {
     }
 
     public void log(Level level, String message, Throwable thrown) {
-        LoggingUtils.log(_logger, level, message, thrown);
+        _logger.log(level, message, thrown);
     }
 
     public void logInfo(String message) {
@@ -385,51 +390,6 @@ public class MFSync implements Runnable, FileUploadListener {
 
     public void logError(String message) {
         log(Level.SEVERE, message, null);
-    }
-
-    static Logger createLogger(Path dir, String logName) {
-
-        try {
-            Logger logger = Logger.getLogger(logName);
-            logger.setLevel(Level.ALL);
-            logger.setUseParentHandlers(false);
-
-            /*
-             * add file handler
-             */
-            String logFileNamePattern = dir.toString() + File.separatorChar + logName + "." + "%g.log";
-            FileHandler fileHandler = new FileHandler(logFileNamePattern, LOG_FILE_SIZE_LIMIT, LOG_FILE_COUNT, true);
-            fileHandler.setFormatter(new Formatter() {
-                @Override
-                public String format(LogRecord record) {
-                    StringBuilder sb = new StringBuilder();
-                    // date & time
-                    sb.append(new SimpleDateFormat(LOG_DATE_FORMAT).format(new Date(record.getMillis()))).append(" ");
-                    // thread
-                    sb.append("[thread ").append(record.getThreadID()).append("] ");
-                    sb.append(String.format("%7s", record.getLevel().getName().toUpperCase())).append(" ");
-                    sb.append(record.getMessage());
-                    if (IS_WINDOWS) {
-                        sb.append("\r");
-                    }
-                    sb.append("\n");
-                    Throwable error = record.getThrown();
-                    if (error != null) {
-                        sb.append(ThrowableUtils.getStackTrace(error));
-                        if (IS_WINDOWS) {
-                            sb.append("\r");
-                        }
-                        sb.append("\n");
-                    }
-                    return sb.toString();
-                }
-            });
-            fileHandler.setLevel(Level.ALL);
-            logger.addHandler(fileHandler);
-            return logger;
-        } catch (Throwable t) {
-            throw new RuntimeException("Failed to create logger: " + t.getMessage(), t);
-        }
     }
 
     @Override

@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import arc.xml.XmlDoc;
@@ -44,7 +45,7 @@ public class AssetSyncTaskProducer implements Runnable {
         _direction = direction == null ? Direction.LOCAL_TO_REMOTE : direction;
 
         _session = session;
-        _logger = logger;
+        _logger = logger == null ? LoggingUtils.createConsoleLogger() : logger;
         _rootDirectory = rootDirectory;
         _rootNamespace = rootNamespace;
         _queue = queue;
@@ -91,7 +92,7 @@ public class AssetSyncTaskProducer implements Runnable {
                                 _queue.put(new AssetDestroyTask(_session, _logger, _rootDirectory, assetPath,
                                         _rootNamespace));
                             } else {
-                                LoggingUtils.logInfo(_logger,
+                                _logger.info(
                                         "Skipped asset: " + assetPath + "(id=" + assetId + ") No asset content found.");
                             }
                             continue;
@@ -102,8 +103,8 @@ public class AssetSyncTaskProducer implements Runnable {
                                 _queue.put(new AssetDestroyTask(_session, _logger, _rootDirectory, assetPath,
                                         _rootNamespace));
                             } else {
-                                LoggingUtils.logInfo(_logger, "Skipped asset: " + assetPath + "(id=" + assetId
-                                        + ") No asset meta/" + PosixAttributes.DOC_TYPE + " found.");
+                                _logger.info("Skipped asset: " + assetPath + "(id=" + assetId + ") No asset meta/"
+                                        + PosixAttributes.DOC_TYPE + " found.");
                             }
                             continue;
                         }
@@ -142,7 +143,7 @@ public class AssetSyncTaskProducer implements Runnable {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            LoggingUtils.logError(_logger, e);
+            _logger.log(Level.SEVERE, e.getMessage(), e);
         }
 
     }
