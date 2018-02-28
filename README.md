@@ -3,8 +3,9 @@ A client application to upload local files to Mediaflux server.
 
 ## I. Installation
 
-  1. Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
-  2. Unzip it to the destination directory:
+  1. Java 8 (JRE or JDK) is required.
+  2. Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
+  3. Unzip it to the destination directory:
     * ```cd opt; sudo unzip ~/Downloads/mf-sync-client-x.x.x.zip```
 
 ## II. Tools
