@@ -205,7 +205,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             if (jobs != null) {
                 for (MFSyncSettings.Job job : jobs) {
                     MFSyncSettings settings = _settings.copy(false);
-                    settings.addJob(dir, PathUtils.join(job.namespace(), SyncTask.relativePath(job.directory(), dir)),
+                    settings.addUploadJob(dir, PathUtils.join(job.namespace(), SyncTask.relativePath(job.directory(), dir)),
                             false, job.includes(), job.excludes());
                     new FileSyncTaskProducer(_session, _logger, settings, _ul, _queue).execute();
                 }

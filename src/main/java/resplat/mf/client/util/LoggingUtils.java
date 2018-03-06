@@ -90,7 +90,13 @@ public class LoggingUtils {
                 }
                 return null;
             }
-        });
+        }) {
+            @Override
+            public void publish(LogRecord record) {
+                super.publish(record);
+                flush();
+            }
+        };
         outHandler.setLevel(Level.ALL);
         StreamHandler errHandler = new StreamHandler(System.err, new Formatter() {
 
@@ -109,7 +115,13 @@ public class LoggingUtils {
                 }
                 return null;
             }
-        });
+        }) {
+            @Override
+            public void publish(LogRecord record) {
+                super.publish(record);
+                flush();
+            }
+        };
         errHandler.setLevel(Level.SEVERE);
         List<Handler> handlers = new ArrayList<Handler>(2);
         handlers.add(outHandler);

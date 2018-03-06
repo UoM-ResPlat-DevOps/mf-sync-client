@@ -30,12 +30,20 @@ public class MFSyncSettings {
 
     public static class Job {
 
+        public static enum Type {
+            UPLOAD, DOWNLOAD
+        }
+
+        private Type _type;
+
         private Set<String> _pathExcludes;
         private Set<String> _pathIncludes;
         private Path _dir;
         private String _ns;
 
-        public Job(Path dir, String ns, boolean isParentNS, Collection<String> includes, Collection<String> excludes) {
+        public Job(Type type, Path dir, String ns, boolean isParentNS, Collection<String> includes,
+                Collection<String> excludes) {
+            _type = type;
             _dir = dir == null ? null : dir.toAbsolutePath();
             if (isParentNS) {
                 _ns = PathUtils.join(ns, _dir.getFileName().toString());
@@ -53,6 +61,7 @@ public class MFSyncSettings {
         }
 
         public Job(XmlDoc.Element je) throws Throwable {
+            _type = Type.valueOf(je.stringValue("@type", "upload").toUpperCase());
             _dir = Paths.get(je.value("directory")).toAbsolutePath();
             boolean isParentNS = je.booleanValue("namespace/@parent", true);
             if (isParentNS) {
@@ -69,6 +78,10 @@ public class MFSyncSettings {
                 _pathExcludes = new LinkedHashSet<String>();
                 _pathExcludes.addAll(je.values("exclude"));
             }
+        }
+
+        public Type type() {
+            return _type;
         }
 
         public Path directory() {
@@ -190,13 +203,13 @@ public class MFSyncSettings {
         }
     }
 
-    public MFSyncSettings addJob(Path directory, String namespace, boolean isParentNS) {
-        return addJob(directory, namespace, isParentNS, null, null);
+    public MFSyncSettings addUploadJob(Path directory, String namespace, boolean isParentNS) {
+        return addUploadJob(directory, namespace, isParentNS, null, null);
     }
 
-    public MFSyncSettings addJob(Path directory, String namespace, boolean isParentNS, Collection<String> includes,
-            Collection<String> excludes) {
-        return addJob(new Job(directory, namespace, isParentNS, includes, excludes));
+    public MFSyncSettings addUploadJob(Path directory, String namespace, boolean isParentNS,
+            Collection<String> includes, Collection<String> excludes) {
+        return addJob(new Job(Job.Type.UPLOAD, directory, namespace, isParentNS, includes, excludes));
     }
 
     public MFSyncSettings addJob(Job job) {

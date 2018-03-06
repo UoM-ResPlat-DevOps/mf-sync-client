@@ -110,6 +110,12 @@ public class MFSyncCLI {
                 } else {
                     if (directory == null) {
                         directory = Paths.get(args[i]);
+                        if (!Files.exists(directory)) {
+                            throw new IllegalArgumentException("Directory: " + directory + " does not exist.");
+                        }
+                        if (!Files.isDirectory(directory)) {
+                            throw new IllegalArgumentException(directory.toString() + " is not a directory.");
+                        }
                     } else {
                         if (parentNamespace == null) {
                             parentNamespace = args[i];
@@ -124,16 +130,16 @@ public class MFSyncCLI {
                 throw new IllegalArgumentException("Invalid arguments.");
             }
             if (directory != null && parentNamespace != null) {
-                syncSettings.addJob(directory, parentNamespace, true);
+                syncSettings.addUploadJob(directory, parentNamespace, true);
             }
             // validate connection settings
             connectionSettings.validate();
-            
+
             session = new MFSession(connectionSettings);
-            
+
             // test authentication
             session.testAuthentication();
-            
+
             // validate sync settings
             syncSettings.validate(session);
         } catch (Throwable e) {

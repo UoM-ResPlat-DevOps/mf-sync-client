@@ -31,12 +31,12 @@
 				<email>wliu5@unimelb.edu.au</email>
 			</notification>
 		</settings>
-		<job>
+		<job type="upload">
 			<directory>/path/to/src-directory1</directory>
 			<namespace parent="false">/path/to/dst-namespace1</namespace>
 			<include>regex</include>
 		</job>
-		<job>
+		<job type="upload">
 			<directory>/path/to/src-directory2</directory>
 			<namespace parent="false">/path/to/dst-namespace2</namespace>
 			<exclude>*.java</exclude>
