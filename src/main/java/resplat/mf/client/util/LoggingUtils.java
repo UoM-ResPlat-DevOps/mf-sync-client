@@ -39,7 +39,12 @@ public class LoggingUtils {
                     // thread
                     sb.append("[thread ").append(record.getThreadID()).append("] ");
                     sb.append(String.format("%7s", record.getLevel().getName().toUpperCase())).append(" ");
-                    sb.append(record.getMessage());
+                    if (record.getThrown() != null) {
+                        sb.append(record.getThrown().getClass().getName()).append(" ");
+                    }
+                    if (record.getMessage() != null) {
+                        sb.append(record.getMessage());
+                    }
                     if (OSUtils.IS_WINDOWS) {
                         sb.append("\r");
                     }
@@ -76,25 +81,25 @@ public class LoggingUtils {
             @Override
             public String format(LogRecord record) {
                 Level level = record.getLevel();
-                if (level.intValue() < Level.SEVERE.intValue()) {
-                    StringBuilder sb = new StringBuilder();
-                    if (level.intValue() >= Level.WARNING.intValue()) {
-                        sb.append("Warning: ");
-                    }
-                    sb.append(record.getMessage());
-                    if (OSUtils.IS_WINDOWS) {
-                        sb.append('\r');
-                    }
-                    sb.append('\n');
-                    return sb.toString();
+                StringBuilder sb = new StringBuilder();
+                if (level.intValue() >= Level.WARNING.intValue()) {
+                    sb.append("Warning: ");
                 }
-                return null;
+                sb.append(record.getMessage());
+                if (OSUtils.IS_WINDOWS) {
+                    sb.append('\r');
+                }
+                sb.append('\n');
+                return sb.toString();
             }
         }) {
             @Override
             public void publish(LogRecord record) {
-                super.publish(record);
-                flush();
+                Level level = record.getLevel();
+                if (level.intValue() < Level.SEVERE.intValue()) {
+                    super.publish(record);
+                    flush();
+                }
             }
         };
         outHandler.setLevel(Level.ALL);
@@ -102,24 +107,28 @@ public class LoggingUtils {
 
             @Override
             public String format(LogRecord record) {
-                Level level = record.getLevel();
-                if (level.intValue() >= Level.SEVERE.intValue() && level.intValue() < Level.OFF.intValue()) {
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("Error: ");
-                    sb.append(record.getMessage());
-                    if (OSUtils.IS_WINDOWS) {
-                        sb.append('\r');
-                    }
-                    sb.append('\n');
-                    return sb.toString();
+                StringBuilder sb = new StringBuilder();
+                sb.append("Error: ");
+                if (record.getThrown() != null) {
+                    sb.append(record.getThrown().getClass().getName()).append(": ");
                 }
-                return null;
+                if (record.getMessage() != null) {
+                    sb.append(record.getMessage());
+                }
+                if (OSUtils.IS_WINDOWS) {
+                    sb.append('\r');
+                }
+                sb.append('\n');
+                return sb.toString();
             }
         }) {
             @Override
             public void publish(LogRecord record) {
-                super.publish(record);
-                flush();
+                Level level = record.getLevel();
+                if (level.intValue() >= Level.SEVERE.intValue() && level.intValue() < Level.OFF.intValue()) {
+                    super.publish(record);
+                    flush();
+                }
             }
         };
         errHandler.setLevel(Level.SEVERE);

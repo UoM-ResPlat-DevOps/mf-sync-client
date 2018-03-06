@@ -16,7 +16,6 @@ import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
 import resplat.mf.client.file.PosixAttributes;
 import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.AssetUtils;
 import resplat.mf.client.util.ChecksumUtils;
 import resplat.mf.client.util.PathUtils;
 
@@ -25,8 +24,6 @@ public class FileUploadTask extends SyncTask {
     private FileUploadListener _ul;
 
     private Path _file;
-
-    private String _service;
 
     private boolean _csumCheck;
 
@@ -91,28 +88,25 @@ public class FileUploadTask extends SyncTask {
                     }
                 }
             }
-            XmlStringWriter w2 = new XmlStringWriter();
-            if (assetExists) {
-                _service = "asset.set";
-                w2.add("id", assetId == null ? ("path=" + assetPath) : assetId);
-                w2.push("meta", new String[] { "action", "replace" });
-            } else {
-                _service = "asset.create";
-                String assetNamespace = PathUtils.getParentPath(assetPath);
-                String assetName = PathUtils.getLastComponent(assetPath);
-                w2.add("namespace", new String[] { "create", "true" }, assetNamespace);
-                w2.add("name", assetName);
-                if (_csumCheck) {
-                    w2.add("action", "get-meta");
-                }
-                w2.push("meta");
-            }
 
+            XmlStringWriter w2 = new XmlStringWriter();
+            w2.push("service", new String[] { "name", "asset.set" });
+            w2.add("id", "path=" + assetPath);
+            w2.add("create", true);
+            w2.push("meta", new String[] { "action", "replace" });
             if (fileAttrs == null) {
                 fileAttrs = PosixAttributes.read(_file);
             }
             fileAttrs.save(w2);
             w2.pop();
+            w2.pop();
+
+            if (_csumCheck) {
+                w2.push("service", new String[] { "name", "asset.get" });
+                w2.add("id", assetId == null ? ("path=" + assetPath) : assetId);
+                w2.pop();
+            }
+
             String fileExt = PathUtils.getFileExtension(_file.toString());
             ServerClient.Input input = new ServerClient.GeneratedInput(null, fileExt, _file.toString(), fileSize) {
                 @Override
@@ -148,11 +142,11 @@ public class FileUploadTask extends SyncTask {
             };
             setCurrentOperation("Uploading file: " + _file + " (" + (assetExists ? "Updating" : "Creating") + " asset: "
                     + assetPath + ")");
-            logInfo("Uploading file: '" + _file + "' to asset: '" + (assetId == null ? assetPath : assetId) + "'");
-            XmlDoc.Element re = session.execute(_service, w2.document(), input, null, this);
+            logInfo("Uploading file: '" + _file + "' to asset" + (assetId == null ? "" : (" " + assetId)) + ": '"
+                    + assetPath + "'");
+            XmlDoc.Element re = session.execute("service.execute", w2.document(), input, null, this);
             if (_csumCheck) {
-                XmlDoc.Element ae = re.elementExists("asset") ? re.element("asset")
-                        : AssetUtils.getAssetMeta(session, assetId == null ? ("path=" + assetPath) : assetId);
+                XmlDoc.Element ae = re.element("reply[@service='asset.get']/response/asset");
                 assetId = re.value("id");
                 long assetCSUM = ae.longValue("content/csum[@base='16']", 0L, 16);
                 if (_csum != assetCSUM) {
@@ -170,12 +164,10 @@ public class FileUploadTask extends SyncTask {
                     }
                 }
             } else {
-                if (re.elementExists("id")) {
-                    assetId = re.value("id");
-                } else if (re.elementExists("version")) {
-                    assetId = re.value("version/@id");
-                } else if (re.elementExists("asset")) {
-                    assetId = re.value("asset/@id");
+                if (re.elementExists("reply[@service='asset.set']/response/id")) {
+                    assetId = re.value("reply[@service='asset.set']/response/id");
+                } else if (re.elementExists("reply[@service='asset.set']/response/version")) {
+                    assetId = re.value("reply[@service='asset.set']/response/version/@id");
                 }
             }
             if (softDestroyed) {

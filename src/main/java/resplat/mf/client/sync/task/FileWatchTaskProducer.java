@@ -32,6 +32,7 @@ import resplat.mf.client.session.MFSession;
 import resplat.mf.client.sync.MFSyncSettings;
 import resplat.mf.client.util.HasAbortableOperation;
 import resplat.mf.client.util.LoggingUtils;
+import resplat.mf.client.util.OSUtils;
 import resplat.mf.client.util.PathUtils;
 
 /**
@@ -164,7 +165,11 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                     // files if the event was triggered by mv)
                     uploadDirectory(child, childAttrs);
                 } else if (isRegularFile) {
-                    uploadFile(child, childAttrs);
+                    if (OSUtils.IS_LINUX || OSUtils.IS_WINDOWS) {
+                        // 
+                    } else {
+                        uploadFile(child, childAttrs);
+                    }
                 }
             } else if (kind == ENTRY_MODIFY) {
                 if (isDirectory) {
@@ -205,8 +210,9 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             if (jobs != null) {
                 for (MFSyncSettings.Job job : jobs) {
                     MFSyncSettings settings = _settings.copy(false);
-                    settings.addUploadJob(dir, PathUtils.join(job.namespace(), SyncTask.relativePath(job.directory(), dir)),
-                            false, job.includes(), job.excludes());
+                    settings.addUploadJob(dir,
+                            PathUtils.join(job.namespace(), SyncTask.relativePath(job.directory(), dir)), false,
+                            job.includes(), job.excludes());
                     new FileSyncTaskProducer(_session, _logger, settings, _ul, _queue).execute();
                 }
             }

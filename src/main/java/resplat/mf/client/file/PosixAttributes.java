@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 import arc.xml.XmlDoc;
 import arc.xml.XmlWriter;
+import resplat.mf.client.util.OSUtils;
 
 public class PosixAttributes {
 
@@ -65,6 +67,12 @@ public class PosixAttributes {
                 _acl.add(new AclEntry(ae));
             }
         }
+    }
+
+    public PosixAttributes(BasicFileAttributes attrs, List<AclEntry> acl) {
+        _ctime = attrs.creationTime().toMillis();
+        _mtime = attrs.lastModifiedTime().toMillis();
+        _acl = acl;
     }
 
     public Long uid() {
@@ -188,12 +196,20 @@ public class PosixAttributes {
     }
 
     public static PosixAttributes read(Path path) throws IOException {
-        Map<String, Object> unixFileAttributes = Files.readAttributes(path, "unix:*", LinkOption.NOFOLLOW_LINKS);
-        String symlink = ((Boolean) unixFileAttributes.get("isSymbolicLink")) ? Files.readSymbolicLink(path).toString()
-                : null;
-        AclFileAttributeView view = Files.getFileAttributeView(path, AclFileAttributeView.class);
-        List<AclEntry> acl = view == null ? null : AclEntry.convertFrom(view.getAcl());
-        return new PosixAttributes(unixFileAttributes, symlink, acl);
+        if (OSUtils.IS_UNIX) {
+            Map<String, Object> unixFileAttributes = Files.readAttributes(path, "unix:*", LinkOption.NOFOLLOW_LINKS);
+            String symlink = ((Boolean) unixFileAttributes.get("isSymbolicLink"))
+                    ? Files.readSymbolicLink(path).toString()
+                    : null;
+            AclFileAttributeView view = Files.getFileAttributeView(path, AclFileAttributeView.class);
+            List<AclEntry> acl = view == null ? null : AclEntry.convertFrom(view.getAcl());
+            return new PosixAttributes(unixFileAttributes, symlink, acl);
+        } else {
+            BasicFileAttributes basicFileAttrs = Files.readAttributes(path, BasicFileAttributes.class);
+            AclFileAttributeView view = Files.getFileAttributeView(path, AclFileAttributeView.class);
+            List<AclEntry> acl = view == null ? null : AclEntry.convertFrom(view.getAcl());
+            return new PosixAttributes(basicFileAttrs, acl);
+        }
     }
 
     public static void save(Path path, XmlWriter w) throws Throwable {
