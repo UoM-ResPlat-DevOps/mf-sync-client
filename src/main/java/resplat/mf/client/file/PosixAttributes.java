@@ -8,11 +8,14 @@ import java.nio.file.Path;
 import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import arc.xml.XmlDoc;
 import arc.xml.XmlWriter;
@@ -69,9 +72,20 @@ public class PosixAttributes {
         }
     }
 
-    public PosixAttributes(BasicFileAttributes attrs, List<AclEntry> acl) {
+    public PosixAttributes(PosixFileAttributes attrs, String symlink, List<AclEntry> acl) {
         _ctime = attrs.creationTime().toMillis();
         _mtime = attrs.lastModifiedTime().toMillis();
+        _mode = convertPosixFilePermissionsToMode(attrs.permissions());
+        _owner = attrs.owner().getName();
+        _group = attrs.group().getName();
+        _symlink = symlink;
+        _acl = acl;
+    }
+
+    public PosixAttributes(BasicFileAttributes attrs, String symlink, List<AclEntry> acl) {
+        _ctime = attrs.creationTime().toMillis();
+        _mtime = attrs.lastModifiedTime().toMillis();
+        _symlink = symlink;
         _acl = acl;
     }
 
@@ -196,19 +210,26 @@ public class PosixAttributes {
     }
 
     public static PosixAttributes read(Path path) throws IOException {
+        AclFileAttributeView view = Files.getFileAttributeView(path, AclFileAttributeView.class);
+        List<AclEntry> acl = view == null ? null : AclEntry.convertFrom(view.getAcl());
+
         if (OSUtils.IS_UNIX) {
-            Map<String, Object> unixFileAttributes = Files.readAttributes(path, "unix:*", LinkOption.NOFOLLOW_LINKS);
-            String symlink = ((Boolean) unixFileAttributes.get("isSymbolicLink"))
-                    ? Files.readSymbolicLink(path).toString()
-                    : null;
-            AclFileAttributeView view = Files.getFileAttributeView(path, AclFileAttributeView.class);
-            List<AclEntry> acl = view == null ? null : AclEntry.convertFrom(view.getAcl());
-            return new PosixAttributes(unixFileAttributes, symlink, acl);
+            try {
+                Map<String, Object> unixFileAttributes = Files.readAttributes(path, "unix:*",
+                        LinkOption.NOFOLLOW_LINKS);
+                String symlink = ((Boolean) unixFileAttributes.get("isSymbolicLink"))
+                        ? Files.readSymbolicLink(path).toString()
+                        : null;
+                return new PosixAttributes(unixFileAttributes, symlink, acl);
+            } catch (IOException e) {
+                PosixFileAttributes posixFileAttrs = Files.readAttributes(path, PosixFileAttributes.class);
+                String symlink = posixFileAttrs.isSymbolicLink() ? Files.readSymbolicLink(path).toString() : null;
+                return new PosixAttributes(posixFileAttrs, symlink, acl);
+            }
         } else {
             BasicFileAttributes basicFileAttrs = Files.readAttributes(path, BasicFileAttributes.class);
-            AclFileAttributeView view = Files.getFileAttributeView(path, AclFileAttributeView.class);
-            List<AclEntry> acl = view == null ? null : AclEntry.convertFrom(view.getAcl());
-            return new PosixAttributes(basicFileAttrs, acl);
+            String symlink = basicFileAttrs.isSymbolicLink() ? Files.readSymbolicLink(path).toString() : null;
+            return new PosixAttributes(basicFileAttrs, symlink, acl);
         }
     }
 
@@ -220,10 +241,56 @@ public class PosixAttributes {
         read(file).save(w);
     }
 
+    public static int convertPosixFilePermissionsToMode(Set<PosixFilePermission> permissions) {
+        int mode = 0;
+        for (PosixFilePermission perm : permissions) {
+            switch (perm) {
+            case OWNER_READ:
+                mode |= 0b100000000;
+                break;
+            case OWNER_WRITE:
+                mode |= 0b010000000;
+                break;
+            case OWNER_EXECUTE:
+                mode |= 0b001000000;
+                break;
+            case GROUP_READ:
+                mode |= 0b000100000;
+                break;
+            case GROUP_WRITE:
+                mode |= 0b000010000;
+                break;
+            case GROUP_EXECUTE:
+                mode |= 0b000001000;
+                break;
+            case OTHERS_READ:
+                mode |= 0b000000100;
+                break;
+            case OTHERS_WRITE:
+                mode |= 0b000000010;
+                break;
+            case OTHERS_EXECUTE:
+                mode |= 0b000000001;
+                break;
+            default:
+                break;
+            }
+        }
+        return mode;
+    }
+
     public static void main(String[] args) throws IOException {
-        PosixAttributes attrs = read(new File("/Users/wliu5/proxy"));
-        System.out.println(attrs.symlink());
-        System.out.println(new Date(attrs.ctime()));
+        Set<PosixFilePermission> perms = new LinkedHashSet<PosixFilePermission>();
+        perms.add(PosixFilePermission.OWNER_READ);
+        perms.add(PosixFilePermission.OWNER_WRITE);
+        perms.add(PosixFilePermission.OWNER_EXECUTE);
+        perms.add(PosixFilePermission.GROUP_READ);
+        perms.add(PosixFilePermission.GROUP_EXECUTE);
+        perms.add(PosixFilePermission.OTHERS_READ);
+        perms.add(PosixFilePermission.OTHERS_EXECUTE);
+        int mode = convertPosixFilePermissionsToMode(perms);
+        System.out.println(mode);
+        System.out.println(Integer.toOctalString(mode));
     }
 
 }

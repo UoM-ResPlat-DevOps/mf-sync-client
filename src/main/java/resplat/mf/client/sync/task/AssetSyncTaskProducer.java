@@ -14,6 +14,7 @@ import arc.xml.XmlStringWriter;
 import resplat.mf.client.file.PosixAttributes;
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.util.LoggingUtils;
+import resplat.mf.client.util.PathUtils;
 
 public class AssetSyncTaskProducer implements Runnable {
 
@@ -108,7 +109,7 @@ public class AssetSyncTaskProducer implements Runnable {
                             }
                             continue;
                         }
-                        Path file = Paths.get(_rootDirectory.toString(),
+                        Path file = Paths.get(PathUtils.normalise(_rootDirectory.toString()),
                                 SyncTask.relativePath(_rootNamespace, assetPath));
                         if (!Files.exists(file)) {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {

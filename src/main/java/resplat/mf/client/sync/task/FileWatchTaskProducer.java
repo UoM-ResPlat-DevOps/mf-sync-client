@@ -40,6 +40,18 @@ import resplat.mf.client.util.PathUtils;
  * @author wliu5
  * 
  *         https://docs.oracle.com/javase/tutorial/displayCode.html?code=https://docs.oracle.com/javase/tutorial/essential/io/examples/WatchDir.java
+ * 
+ *         NOTE:
+ * 
+ *         There are some platform dependency issues with Java WatchService. see
+ *         the discussions below:
+ * 
+ *         https://stackoverflow.com/questions/16777869/java-7-watchservice-ignoring-multiple-occurrences-of-the-same-event
+ *         http://blog.omega-prime.co.uk/2015/11/14/beware-java-nio-file-watchservice-is-subtly-broken-on-linux/
+ *         https://stackoverflow.com/questions/22956262/java-watchservice-gets-informed-before-content-is-copied
+ *         https://stackoverflow.com/questions/33753561/java-nio-watch-service-created-both-entry-create-and-entry-modify-when-a-new
+ * 
+ *         We decide not to use this solution.
  *
  */
 public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
@@ -166,14 +178,20 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                     uploadDirectory(child, childAttrs);
                 } else if (isRegularFile) {
                     if (OSUtils.IS_LINUX || OSUtils.IS_WINDOWS) {
-                        // 
+                        // On Linux and Windows, multiple events: CREATE,
+                        // MODIFY, MODIFY, are dispatched
+                        // as the copy operation is not atomic. Therefore, we
+                        // ignore CREATE event, rely on MODIFY event.
+                        //
+                        // see also
+                        // https://stackoverflow.com/questions/16777869/java-7-watchservice-ignoring-multiple-occurrences-of-the-same-event
                     } else {
                         uploadFile(child, childAttrs);
                     }
                 }
             } else if (kind == ENTRY_MODIFY) {
                 if (isDirectory) {
-                    // TODO
+                    // TODO see if this event can be used.
                 } else if (isRegularFile) {
                     uploadFile(child, childAttrs);
                 }
@@ -250,6 +268,13 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
             while (!Thread.interrupted()) {
                 // wait for key to be signaled
                 WatchKey key = _watcher.take();
+                // The code below is trying to work around the issue that
+                // multiple events are dispatched on Linux and Windows
+                // platforms: CREATE, MODIFY, MODIFY
+                //
+                // See also
+                // https://stackoverflow.com/questions/16777869/java-7-watchservice-ignoring-multiple-occurrences-of-the-same-event
+                Thread.sleep(50);
                 processEvents(key);
 
                 // reset key and remove from set if directory no longer

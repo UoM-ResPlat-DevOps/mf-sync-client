@@ -28,7 +28,7 @@ public abstract class SyncTask extends AbstractTask {
     }
 
     protected static String relativePath(Path parent, Path child) {
-        return parent.toAbsolutePath().relativize(child.toAbsolutePath()).toString();
+        return PathUtils.normalise(parent.toAbsolutePath().relativize(child.toAbsolutePath()).toString());
     }
 
     protected static String relativePath(String parent, String child) {

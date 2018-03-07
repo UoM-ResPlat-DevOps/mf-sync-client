@@ -14,6 +14,7 @@ import arc.xml.XmlDoc.Element;
 import arc.xml.XmlStringWriter;
 import resplat.mf.client.file.PosixAttributes;
 import resplat.mf.client.session.MFSession;
+import resplat.mf.client.util.PathUtils;
 
 public class AssetDownloadTask extends SyncTask {
 
@@ -34,7 +35,7 @@ public class AssetDownloadTask extends SyncTask {
     @Override
     public void execute(MFSession session) throws Throwable {
 
-        Path file = Paths.get(rootDirectory().toString(), relativePath(rootNamespace(), _assetPath));
+        Path file = Paths.get(PathUtils.normalise(rootDirectory().toString()), relativePath(rootNamespace(), _assetPath));
         boolean fileExists = Files.exists(file);
         if (fileExists) {
             PosixAttributes fileAttrs = PosixAttributes.read(file);
