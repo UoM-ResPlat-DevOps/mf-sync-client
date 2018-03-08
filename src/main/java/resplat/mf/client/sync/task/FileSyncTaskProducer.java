@@ -24,7 +24,7 @@ public class FileSyncTaskProducer implements Runnable {
     private MFSyncSettings _settings;
     private FileUploadListener _ul;
 
-    private Filter _filter = null;;
+    private Filter _filter = null;
 
     public FileSyncTaskProducer(MFSession session, Logger logger, MFSyncSettings settings, FileUploadListener ul,
             BlockingQueue<SyncTask> queue) {
@@ -38,7 +38,19 @@ public class FileSyncTaskProducer implements Runnable {
     @Override
     public void run() {
         try {
-            execute();
+            while (!Thread.interrupted()) {
+                _logger.info("Start scanning source files...");
+                execute();
+                if (!_settings.daemonEnabled()) {
+                    break;
+                }
+                Thread.sleep(_settings.daemonScanInterval());
+                while (!_queue.isEmpty()) {
+                    _logger.info("Task queue is not empty. Wait for " + (_settings.daemonScanInterval() / 1000)
+                            + " seconds...");
+                    Thread.sleep(_settings.daemonScanInterval());
+                }
+            }
         } catch (Throwable e) {
             if (_logger != null) {
                 _logger.log(Level.SEVERE, e.getMessage(), e);

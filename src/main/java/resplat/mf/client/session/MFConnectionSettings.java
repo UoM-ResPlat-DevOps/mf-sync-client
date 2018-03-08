@@ -16,8 +16,8 @@ import arc.xml.XmlDoc;
  */
 public class MFConnectionSettings {
 
-    private String _serverHost;
-    private String _serverTransport;
+    private String _serverHost = null;
+    private String _serverTransport = null;
     private int _serverPort;
 
     private int _connectRetryTimes = MFSession.DEFAULT_CONNECT_RETRY_TIMES;
@@ -25,12 +25,16 @@ public class MFConnectionSettings {
     private int _executeRetryTimes = MFSession.DEFAULT_EXECUTE_RETRY_TIMES;
     private int _executeRetryInterval = MFSession.DEFAULT_EXECUTE_RETRY_INTERVAL;
 
-    private String _app;
-    private String _domain;
-    private String _user;
-    private String _password;
-    private String _token;
-    private String _sessionKey;
+    private String _app = null;
+    private String _domain = null;
+    private String _user = null;
+    private String _password = null;
+    private String _token = null;
+    private String _sessionKey = null;
+
+    public MFConnectionSettings() throws Throwable {
+
+    }
 
     public MFConnectionSettings(File xmlFile) throws Throwable {
         if (xmlFile != null && xmlFile.exists()) {
@@ -202,7 +206,7 @@ public class MFConnectionSettings {
     }
 
     public MFConnectionSettings setServerTransport(String transport) throws Exception {
-        parseServerTransport(transport);
+        _serverTransport = parseServerTransport(transport);
         return this;
     }
 

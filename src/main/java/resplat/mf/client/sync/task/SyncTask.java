@@ -5,8 +5,6 @@ import java.util.logging.Logger;
 
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.task.AbstractTask;
-import resplat.mf.client.util.PathUtils;
-import resplat.mf.client.util.StringUtils;
 
 public abstract class SyncTask extends AbstractTask {
 
@@ -25,14 +23,6 @@ public abstract class SyncTask extends AbstractTask {
 
     public final Path rootDirectory() {
         return _rootDir;
-    }
-
-    protected static String relativePath(Path parent, Path child) {
-        return PathUtils.normalise(parent.toAbsolutePath().relativize(child.toAbsolutePath()).toString());
-    }
-
-    protected static String relativePath(String parent, String child) {
-        return PathUtils.trimLeadingSlash(StringUtils.trimPrefix(child, parent, false));
     }
 
 }

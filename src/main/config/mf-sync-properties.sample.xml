@@ -23,18 +23,22 @@
 		<settings>
 			<numberOfWorkers>8</numberOfWorkers>
 			<csumCheck>true</csumCheck>
-			<watchDaemon>false</watchDaemon>
-			<daemonPort>9761</daemonPort>
+			<daemon enabled="true">
+				<listenerPort>9761</listenerPort>
+				<!-- scanInterval in milliseconds -->
+				<scanInterval>60000</scanInterval>
+			</daemon>
 			<logDirectory>/tmp</logDirectory>
-			<includeEmptyFolder>false</includeEmptyFolder>
+			<excludeEmptyFolder>true</excludeEmptyFolder>
 			<notification>
 				<email>wliu5@unimelb.edu.au</email>
 			</notification>
 		</settings>
 		<job type="upload">
 			<directory>/path/to/src-directory1</directory>
-			<namespace parent="false">/path/to/dst-namespace1</namespace>
-			<include>regex</include>
+			<project>51</project>
+			<include>wilson*/**</include>
+			<exclude>**/.DS_Store</exclude>
 		</job>
 		<job type="upload">
 			<directory>/path/to/src-directory2</directory>

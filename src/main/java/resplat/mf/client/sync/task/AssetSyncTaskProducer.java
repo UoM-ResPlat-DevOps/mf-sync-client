@@ -110,7 +110,7 @@ public class AssetSyncTaskProducer implements Runnable {
                             continue;
                         }
                         Path file = Paths.get(PathUtils.normalise(_rootDirectory.toString()),
-                                SyncTask.relativePath(_rootNamespace, assetPath));
+                                PathUtils.relativePath(_rootNamespace, assetPath));
                         if (!Files.exists(file)) {
                             if (_direction == Direction.LOCAL_TO_REMOTE) {
                                 assetsToDelete.add(assetId);

@@ -17,7 +17,7 @@ public class AssetDestroyTask extends SyncTask {
     }
 
     public AssetDestroyTask(MFSession session, Logger logger, Path file, Path rootDir, String rootNS) {
-        this(session, logger, rootDir, PathUtils.join(rootNS, relativePath(rootDir, file)), rootNS);
+        this(session, logger, rootDir, PathUtils.join(rootNS, PathUtils.relativePath(rootDir, file)), rootNS);
     }
 
     @Override

@@ -36,7 +36,6 @@ import resplat.mf.client.file.Filter;
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.sync.task.FileSyncTaskProducer;
 import resplat.mf.client.sync.task.FileUploadListener;
-import resplat.mf.client.sync.task.FileWatchTaskProducer;
 import resplat.mf.client.sync.task.PoisonTask;
 import resplat.mf.client.sync.task.SyncTask;
 import resplat.mf.client.sync.task.TaskConsumer;
@@ -57,7 +56,9 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
 
     public static final int MAX_ACTIVITIES = 100;
 
-    public static final int DEFAULT_DAEMON_PORT = 9761;
+    public static final int DEFAULT_DAEMON_LISTENER_PORT = 9761;
+
+    public static final int DEFAULT_DAEMON_SCAN_INTERVAL = 60000; // milliseconds
 
     private MFSession _session;
 
@@ -89,7 +90,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
 
     private long _startTime;
 
-    private Thread _daemonThread;
+    private Thread _daemonListenerThread;
 
     private ServerSocket _listenerSocket;
 
@@ -188,12 +189,12 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
              */
 
             // starts listener
-            startDaemon();
+            startDaemonListener();
 
-            if (_settings.watchDaemon()) {
-                _producerThreadPool.submit(
-                        new FileWatchTaskProducer(_session, _logger, _settings, this, _queue).setFilter(logFileFilter));
-
+            if (_settings.daemonEnabled()) {
+                // _producerThreadPool.submit(
+                // new FileWatchTaskProducer(_session, _logger, _settings, this,
+                // _queue).setFilter(logFileFilter));
             } else {
 
                 _producerThreadPool.shutdown();
@@ -207,7 +208,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
                 printSummary(System.out);
                 mailSummary();
                 _session.stopPingServerPeriodically();
-                stopDaemon();
+                stopDaemonListener();
             }
 
         } catch (Throwable e) {
@@ -258,7 +259,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
         ps.println(String.format("       total-processed-files: %16d", total));
         ps.println(String.format("        total-uploaded-bytes: %16d bytes", totalBytes));
 
-        if (!_settings.watchDaemon()) {
+        if (!_settings.daemonEnabled()) {
             double speed = totalBytes == 0 ? 0.0
                     : ((double) totalBytes / 1000000.0) / ((System.currentTimeMillis() - _startTime) / 1000.0);
             ps.println(String.format("                upload-speed: %16.3f MB/s", speed));
@@ -303,19 +304,19 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
             _producerThreadPool.shutdownNow();
         }
         _session.stopPingServerPeriodically();
-        if (_settings.watchDaemon() && _daemonThread != null && !_daemonThread.isInterrupted()) {
-            stopDaemon();
+        if (_settings.daemonEnabled() && _daemonListenerThread != null && !_daemonListenerThread.isInterrupted()) {
+            stopDaemonListener();
         }
     }
 
-    public void startDaemon() {
-        if (_daemonThread == null) {
-            _daemonThread = new Thread(new Runnable() {
+    public void startDaemonListener() {
+        if (_daemonListenerThread == null) {
+            _daemonListenerThread = new Thread(new Runnable() {
 
                 @Override
                 public void run() {
                     try {
-                        _listenerSocket = new ServerSocket(_settings.daemonPort(), 0, InetAddress.getByName(null));
+                        _listenerSocket = new ServerSocket(_settings.daemonListenerPort(), 0, InetAddress.getByName(null));
                         try {
                             outerloop: while (!Thread.interrupted() && !_listenerSocket.isClosed()) {
                                 Socket client = _listenerSocket.accept();
@@ -348,18 +349,18 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
                     }
                 }
             }, "mf-sync daemon listener");
-            _daemonThread.start();
+            _daemonListenerThread.start();
         }
     }
 
-    public void stopDaemon() {
-        if (_daemonThread != null) {
+    public void stopDaemonListener() {
+        if (_daemonListenerThread != null) {
             try {
                 _listenerSocket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                _daemonThread.interrupt();
+                _daemonListenerThread.interrupt();
             }
         }
     }

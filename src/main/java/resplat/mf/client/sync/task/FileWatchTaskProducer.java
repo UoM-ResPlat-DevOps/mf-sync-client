@@ -204,13 +204,13 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
         if (jobs != null) {
             for (MFSyncSettings.Job job : jobs) {
                 SimpleEntry<Boolean, Boolean> exists = exists(_session,
-                        PathUtils.join(job.namespace(), SyncTask.relativePath(job.directory(), path)));
+                        PathUtils.join(job.namespace(), PathUtils.relativePath(job.directory(), path)));
                 boolean namespaceExists = exists.getKey();
                 if (namespaceExists) {
                     // destroy all assets in the corresponding
                     // namespace
                     final String namespace = PathUtils.join(job.namespace(),
-                            SyncTask.relativePath(job.directory(), path));
+                            PathUtils.relativePath(job.directory(), path));
                     _logger.info("Destroying namespace: '" + namespace + "'");
                     softDestroyAllAssets(_session, namespace);
                 }
@@ -229,7 +229,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
                 for (MFSyncSettings.Job job : jobs) {
                     MFSyncSettings settings = _settings.copy(false);
                     settings.addUploadJob(dir,
-                            PathUtils.join(job.namespace(), SyncTask.relativePath(job.directory(), dir)), false,
+                            PathUtils.join(job.namespace(), PathUtils.relativePath(job.directory(), dir)), false,
                             job.includes(), job.excludes());
                     new FileSyncTaskProducer(_session, _logger, settings, _ul, _queue).execute();
                 }

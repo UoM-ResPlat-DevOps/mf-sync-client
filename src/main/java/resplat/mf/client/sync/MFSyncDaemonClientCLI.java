@@ -15,12 +15,12 @@ public class MFSyncDaemonClientCLI {
 
     public static void main(String[] args) throws Throwable {
 
-        int port = MFSync.DEFAULT_DAEMON_PORT;
+        int port = MFSync.DEFAULT_DAEMON_LISTENER_PORT;
         String command = null;
         try {
             if (Files.exists(Paths.get(MFSync.PROPERTIES_FILE))) {
                 MFSyncSettings settings = new MFSyncSettings(new File(MFSync.PROPERTIES_FILE));
-                port = settings.daemonPort();
+                port = settings.daemonListenerPort();
             }
             for (int i = 0; i < args.length;) {
                 if ("-h".equalsIgnoreCase(args[i]) || "--help".equalsIgnoreCase(args[i])) {

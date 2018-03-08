@@ -35,7 +35,8 @@ public class AssetDownloadTask extends SyncTask {
     @Override
     public void execute(MFSession session) throws Throwable {
 
-        Path file = Paths.get(PathUtils.normalise(rootDirectory().toString()), relativePath(rootNamespace(), _assetPath));
+        Path file = Paths.get(PathUtils.normalise(rootDirectory().toString()),
+                PathUtils.relativePath(rootNamespace(), _assetPath));
         boolean fileExists = Files.exists(file);
         if (fileExists) {
             PosixAttributes fileAttrs = PosixAttributes.read(file);

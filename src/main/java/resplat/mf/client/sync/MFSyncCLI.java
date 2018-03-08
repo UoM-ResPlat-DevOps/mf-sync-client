@@ -151,7 +151,7 @@ public class MFSyncCLI {
             System.exit(1);
         }
         MFSync sync = new MFSync(session, syncSettings);
-        if (syncSettings.watchDaemon()) {
+        if (syncSettings.daemonEnabled()) {
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 
                 @Override
@@ -183,7 +183,7 @@ public class MFSyncCLI {
         System.out.println("    --mf.auth <domain,user,password>     The Mediaflux user authentication deatils.");
         System.out.println("    --mf.token <token>                   The Mediaflux secure identity token.");
         System.out.println("    --mf.sid <sid>                       The Mediaflux session id.");
-        System.out.println("    --daemon                             Start a daemon to watch the changes in the specified directory.");
+        System.out.println("    --daemon                             Start a daemon to periodically scan the changes in the specified directory.");
         System.out.println("    --csum-check                         Validate CRC32 checksum are upload. It will slow down the upload process.");
         System.out.println("    --exclude-empty-folder               Exclude empty folders.");
         System.out.println("    --number-of-workers <n>              Number of worker threads to upload the files. Defaults to 1.");

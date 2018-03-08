@@ -13,7 +13,7 @@ public class AssetNamespaceCreateTask extends SyncTask {
 
     public AssetNamespaceCreateTask(MFSession session, Logger logger, Path dir, Path rootDir, String rootNS) {
         super(session, logger, rootDir, rootNS);
-        _ns = PathUtils.join(rootNamespace(), relativePath(rootDirectory(), dir));
+        _ns = PathUtils.join(rootNamespace(), PathUtils.relativePath(rootDirectory(), dir));
     }
 
     @Override

@@ -16,7 +16,6 @@ import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
 import resplat.mf.client.file.PosixAttributes;
 import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.ChecksumUtils;
 import resplat.mf.client.util.PathUtils;
 
 public class FileUploadTask extends SyncTask {
@@ -50,7 +49,7 @@ public class FileUploadTask extends SyncTask {
             }
             PosixAttributes fileAttrs = null;
             long fileSize = Files.size(_file);
-            String assetPath = PathUtils.join(rootNamespace(), relativePath(rootDirectory(), _file));
+            String assetPath = PathUtils.join(rootNamespace(), PathUtils.relativePath(rootDirectory(), _file));
             String assetId = null;
             // check if asset exists
             XmlStringWriter w1 = new XmlStringWriter();
@@ -63,7 +62,9 @@ public class FileUploadTask extends SyncTask {
                 XmlDoc.Element ae = session.execute("asset.get", w1.document(), null, null, this).element("asset");
                 softDestroyed = ae.booleanValue("@destroyed", false);
                 assetId = ae.value("@id");
-                long assetCSUM = ae.longValue("content/csum[@base='16']", 0L, 16);
+                // @formatter:off
+                // long assetCSUM = ae.longValue("content/csum[@base='16']", 0L, 16);
+                // @formatter:on
                 if (ae.elementExists("content") && ae.elementExists("meta/" + PosixAttributes.DOC_TYPE)) {
                     long assetContentSize = ae.longValue("content/size");
                     if (assetContentSize == fileSize) {
@@ -72,18 +73,20 @@ public class FileUploadTask extends SyncTask {
                         if ((fileAttrs.mtimeEquals(attrs) || fileAttrs.mtimeLessThan(attrs))) {
                             // local file mtime <= server file mtime
                             // file on the server side is newer
-                            if (!_csumCheck || assetCSUM == ChecksumUtils.getCRC32Value(_file)) {
-                                if (softDestroyed) {
-                                    undestroy(session, assetId);
-                                }
-                                logInfo("Skipped file: '" + _file + "'. Asset: '" + assetPath + "' already exists.");
-                                setWorkTotal(1);
-                                setWorkProgressed(1);
-                                if (_ul != null) {
-                                    _ul.fileUploadSkipped(_file);
-                                }
-                                return;
+                            // @formatter:off
+                            // if (!_csumCheck || assetCSUM == ChecksumUtils.getCRC32Value(_file)) {
+                            if (softDestroyed) {
+                                undestroy(session, assetId);
                             }
+                            logInfo("Skipped file: '" + _file + "'. Asset: '" + assetPath + "' already exists.");
+                            setWorkTotal(1);
+                            setWorkProgressed(1);
+                            if (_ul != null) {
+                                _ul.fileUploadSkipped(_file);
+                            }
+                            return;
+                            // }
+                            // @formatter:on
                         }
                     }
                 }

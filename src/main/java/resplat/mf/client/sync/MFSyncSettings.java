@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.Set;
 
 import arc.xml.XmlDoc;
+import resplat.mf.client.project.VicNodeProject;
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.util.AssetNamespaceUtils;
+import resplat.mf.client.util.PathPattern;
 import resplat.mf.client.util.PathUtils;
 
 /**
@@ -40,8 +42,18 @@ public class MFSyncSettings {
         private Set<String> _pathIncludes;
         private Path _dir;
         private String _ns;
+        private int _projectNumber;
 
         public Job(Type type, Path dir, String ns, boolean isParentNS, Collection<String> includes,
+                Collection<String> excludes) {
+            this(type, dir, ns, isParentNS, 0, includes, excludes);
+        }
+
+        public Job(Type type, Path dir, int projectNumber, Collection<String> includes, Collection<String> excludes) {
+            this(type, dir, null, true, projectNumber, includes, excludes);
+        }
+
+        Job(Type type, Path dir, String ns, boolean isParentNS, int projectNumber, Collection<String> includes,
                 Collection<String> excludes) {
             _type = type;
             _dir = dir == null ? null : dir.toAbsolutePath();
@@ -50,6 +62,7 @@ public class MFSyncSettings {
             } else {
                 _ns = ns;
             }
+            _projectNumber = projectNumber;
             if (includes != null && !includes.isEmpty()) {
                 _pathIncludes = new LinkedHashSet<String>();
                 _pathIncludes.addAll(includes);
@@ -70,6 +83,7 @@ public class MFSyncSettings {
             } else {
                 _ns = je.value("namespace");
             }
+            _projectNumber = je.intValue("project", 0);
             if (je.elementExists("include")) {
                 _pathIncludes = new LinkedHashSet<String>();
                 _pathIncludes.addAll(je.values("include"));
@@ -92,6 +106,14 @@ public class MFSyncSettings {
             return _ns;
         }
 
+        void setNamespace(String namespace) {
+            _ns = namespace;
+        }
+
+        public int projectNumber() {
+            return _projectNumber;
+        }
+
         public Set<String> excludes() {
             return _pathExcludes != null ? Collections.unmodifiableSet(_pathExcludes) : null;
         }
@@ -101,32 +123,40 @@ public class MFSyncSettings {
         }
 
         public boolean matchPath(Path path) {
-            return matchPath(path.toAbsolutePath().toString());
+            if (!PathUtils.isOrIsDescendant(path, _dir)) {
+                return false;
+            }
+            boolean haveIncludePatterns = _pathIncludes != null && !_pathIncludes.isEmpty();
+            boolean haveExcludePatterns = _pathExcludes != null && !_pathExcludes.isEmpty();
+            if (!haveIncludePatterns && !haveExcludePatterns) {
+                return true;
+            }
+            String relativePath = PathUtils.relativePath(_dir, path);
+            boolean included = haveIncludePatterns ? false : true;
+            if (haveIncludePatterns) {
+                for (String include : _pathIncludes) {
+                    String regexInclude = PathPattern.toRegEx(include);
+                    if (relativePath.matches(regexInclude)) {
+                        included = true;
+                        break;
+                    }
+                }
+            }
+            boolean excluded = haveExcludePatterns ? false : true;
+            if (haveExcludePatterns) {
+                for (String exclude : _pathExcludes) {
+                    String regexExclude = PathPattern.toRegEx(exclude);
+                    if (relativePath.matches(regexExclude)) {
+                        excluded = true;
+                        break;
+                    }
+                }
+            }
+            return included && !excluded;
         }
 
         public boolean matchPath(File path) {
-            return matchPath(path.getAbsolutePath());
-        }
-
-        public boolean matchPath(String path) {
-            if (!PathUtils.isOrIsDescendant(path, _dir.toString())) {
-                return false;
-            }
-            if (_pathIncludes != null) {
-                for (String include : _pathIncludes) {
-                    if (!path.matches(include)) {
-                        return false;
-                    }
-                }
-            }
-            if (_pathExcludes != null) {
-                for (String exclude : _pathExcludes) {
-                    if (path.matches(exclude)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
+            return matchPath(path.toPath());
         }
 
         public boolean directoryAndNamespaceEquals(Job job) {
@@ -148,8 +178,9 @@ public class MFSyncSettings {
     private List<Job> _jobs;
 
     private int _numberOfWorkers = 1;
-    private boolean _watchDaemon = false;
-    private int _daemonPort = MFSync.DEFAULT_DAEMON_PORT;
+    private boolean _daemonEnabled = false;
+    private int _daemonListenerPort = MFSync.DEFAULT_DAEMON_LISTENER_PORT;
+    private int _daemonScanInterval = MFSync.DEFAULT_DAEMON_SCAN_INTERVAL;
     private boolean _csumCheck = false;
     private boolean _excludeEmptyFolder = false;
     private Path _logDirectory = MFSync.DEFAULT_LOG_DIR;
@@ -186,8 +217,9 @@ public class MFSyncSettings {
                     "No sync element is found in the properties XML element. Invalid/Incomplete configuration file.");
         }
         _numberOfWorkers = se.intValue("settings/numberOfWorkers", 1);
-        _watchDaemon = se.booleanValue("settings/watchDaemon", false);
-        _daemonPort = se.intValue("settings/daemonPort", MFSync.DEFAULT_DAEMON_PORT);
+        _daemonEnabled = se.booleanValue("settings/daemon/@enabled", false);
+        _daemonListenerPort = se.intValue("settings/daemon/listenerPort", MFSync.DEFAULT_DAEMON_LISTENER_PORT);
+        _daemonScanInterval = se.intValue("settings/daemon/scanInterval", MFSync.DEFAULT_DAEMON_SCAN_INTERVAL);
         _csumCheck = se.booleanValue("settings/csumCheck", false);
         _excludeEmptyFolder = se.booleanValue("settings/excludeEmptyFolder", false);
         _logDirectory = Paths.get(se.stringValue("settings/logDirectory", System.getProperty("user.dir")));
@@ -210,6 +242,15 @@ public class MFSyncSettings {
     public MFSyncSettings addUploadJob(Path directory, String namespace, boolean isParentNS,
             Collection<String> includes, Collection<String> excludes) {
         return addJob(new Job(Job.Type.UPLOAD, directory, namespace, isParentNS, includes, excludes));
+    }
+
+    public MFSyncSettings addUploadJob(Path directory, int projectNumber) {
+        return addUploadJob(directory, projectNumber, null, null);
+    }
+
+    public MFSyncSettings addUploadJob(Path directory, int projectNumber, Collection<String> includes,
+            Collection<String> excludes) {
+        return addJob(new Job(Job.Type.UPLOAD, directory, projectNumber, includes, excludes));
     }
 
     public MFSyncSettings addJob(Job job) {
@@ -256,21 +297,30 @@ public class MFSyncSettings {
     }
 
     public MFSyncSettings setWatchDaemon(boolean watchDaemon) {
-        _watchDaemon = watchDaemon;
+        _daemonEnabled = watchDaemon;
         return this;
     }
 
-    public boolean watchDaemon() {
-        return _watchDaemon;
+    public boolean daemonEnabled() {
+        return _daemonEnabled;
     }
 
-    public MFSyncSettings setDaemonPort(int daemonPort) {
-        _daemonPort = daemonPort;
+    public MFSyncSettings setDaemonListenerPort(int port) {
+        _daemonListenerPort = port;
         return this;
     }
 
-    public int daemonPort() {
-        return _daemonPort;
+    public int daemonListenerPort() {
+        return _daemonListenerPort;
+    }
+
+    public MFSyncSettings setDaemonScanInterval(int millisecs) {
+        _daemonScanInterval = millisecs;
+        return this;
+    }
+
+    public int daemonScanInterval() {
+        return _daemonScanInterval;
     }
 
     public MFSyncSettings setCsumCheck(boolean csumCheck) {
@@ -312,12 +362,21 @@ public class MFSyncSettings {
             if (job.directory() == null || !Files.exists(job.directory()) || !Files.isDirectory(job.directory())) {
                 throw new IllegalArgumentException("Invalid sync job direcotry: '" + job.directory().toString() + "'");
             }
-            if (!AssetNamespaceUtils.assetNamespaceExists(session, job.parentNamespace())) {
-                throw new IllegalArgumentException(
-                        "Destination (parent) namespace: '" + job.parentNamespace() + "' does not exist.");
+            if (job.projectNumber() > 0) {
+                String ns = VicNodeProject.getProjectNamespace(session, job.projectNumber());
+                if (ns == null) {
+                    throw new IllegalArgumentException(
+                            "Destination project " + job.projectNumber() + " or its namespace does not exist.");
+                }
+                job.setNamespace(ns);
+            } else {
+                if (!AssetNamespaceUtils.assetNamespaceExists(session, job.parentNamespace())) {
+                    throw new IllegalArgumentException(
+                            "Destination (parent) namespace: '" + job.parentNamespace() + "' does not exist.");
+                }
             }
         }
-        if (_watchDaemon) {
+        if (_daemonEnabled) {
             for (Job job : _jobs) {
                 if (PathUtils.isOrIsDescendant(_logDirectory, job.directory())) {
                     throw new IllegalArgumentException("log directory: '" + _logDirectory
@@ -328,10 +387,6 @@ public class MFSyncSettings {
     }
 
     public List<Job> jobsMatchPath(Path path) {
-        return jobsMatchPath(path.toAbsolutePath().toString());
-    }
-
-    public List<Job> jobsMatchPath(String path) {
         List<Job> r = new ArrayList<Job>();
         if (_jobs != null) {
             for (Job job : _jobs) {
@@ -349,7 +404,7 @@ public class MFSyncSettings {
     public MFSyncSettings copy(boolean includeJobs) throws Throwable {
         MFSyncSettings settings = new MFSyncSettings((XmlDoc.Element) null);
         settings.setNumberOfWorkers(_numberOfWorkers);
-        settings.setWatchDaemon(_watchDaemon);
+        settings.setWatchDaemon(_daemonEnabled);
         settings.setCsumCheck(_csumCheck);
         settings.setExcludeEmptyFolder(_excludeEmptyFolder);
         settings.setLogDirectory(_logDirectory);
@@ -384,9 +439,9 @@ public class MFSyncSettings {
             }
         }
         ps.println("    number-of-workers:  " + _numberOfWorkers);
-        ps.println("    daemon: " + _watchDaemon);
-        if (_watchDaemon) {
-            ps.println("    daemon-port: " + _daemonPort);
+        ps.println("    daemon: " + _daemonEnabled);
+        if (_daemonEnabled) {
+            ps.println("    daemon-port: " + _daemonListenerPort);
         }
         ps.println("    csum-check: " + _csumCheck);
         ps.println("    exclude-empty-folder: " + _excludeEmptyFolder);

@@ -145,6 +145,14 @@ public class PathUtils {
         }
     }
 
+    public static String relativePath(Path parent, Path child) {
+        return PathUtils.normalise(parent.toAbsolutePath().relativize(child.toAbsolutePath()).toString());
+    }
+
+    public static String relativePath(String parent, String child) {
+        return PathUtils.trimLeadingSlash(StringUtils.trimPrefix(child, parent, false));
+    }
+
     public static void main(String[] args) throws Throwable {
         // System.out.println(Paths.get("a/b/c").relativize(Paths.get("a/b/c/d")));
         // System.out.println(isOrIsDescendant("a/bb", "a/b"));
