@@ -53,7 +53,11 @@ public class FileSyncTaskProducer implements Runnable {
             }
         } catch (Throwable e) {
             if (_logger != null) {
-                _logger.log(Level.SEVERE, e.getMessage(), e);
+                if (e instanceof InterruptedException) {
+                    _logger.info("Thread interrupted. Stopped scanning source files.");
+                } else {
+                    _logger.log(Level.SEVERE, e.getMessage(), e);
+                }
             }
         }
     }
