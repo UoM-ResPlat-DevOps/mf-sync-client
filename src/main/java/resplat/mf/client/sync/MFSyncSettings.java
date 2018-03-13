@@ -144,27 +144,25 @@ public class MFSyncSettings {
                 return true;
             }
             String relativePath = PathUtils.relativePath(_dir, path);
-            boolean included = haveIncludePatterns ? false : true;
             if (haveIncludePatterns) {
                 for (String include : _pathIncludes) {
                     String regexInclude = PathPattern.toRegEx(include);
                     if (relativePath.matches(regexInclude)) {
-                        included = true;
-                        break;
+                        return true;
                     }
                 }
+                return false;
             }
-            boolean excluded = haveExcludePatterns ? false : true;
             if (haveExcludePatterns) {
                 for (String exclude : _pathExcludes) {
                     String regexExclude = PathPattern.toRegEx(exclude);
                     if (relativePath.matches(regexExclude)) {
-                        excluded = true;
-                        break;
+                        return false;
                     }
                 }
+                return true;
             }
-            return included && !excluded;
+            return true;
         }
 
         public boolean matchPath(File path) {

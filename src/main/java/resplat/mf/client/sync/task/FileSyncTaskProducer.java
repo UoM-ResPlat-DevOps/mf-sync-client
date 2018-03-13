@@ -6,20 +6,30 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import resplat.mf.client.file.Filter;
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.sync.MFSyncSettings;
+import resplat.mf.client.task.Task;
 
 public class FileSyncTaskProducer implements Runnable {
 
     private MFSession _session;
     private Logger _logger;
-    private BlockingQueue<SyncTask> _queue;
+    private BlockingQueue<Task> _queue;
+
+    private ThreadPoolExecutor _checkThreadPool;
+    private BlockingQueue<FileUploadTask> _checkQueue;
+    private int _checkBatchSize = 100;
 
     private MFSyncSettings _settings;
     private FileUploadListener _ul;
@@ -27,12 +37,21 @@ public class FileSyncTaskProducer implements Runnable {
     private Filter _filter = null;
 
     public FileSyncTaskProducer(MFSession session, Logger logger, MFSyncSettings settings, FileUploadListener ul,
-            BlockingQueue<SyncTask> queue) {
+            BlockingQueue<Task> queue) {
         _session = session;
         _logger = logger;
         _settings = settings;
         _ul = ul;
         _queue = queue;
+        _checkThreadPool = new ThreadPoolExecutor(1, 4, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
+                new ThreadFactory() {
+
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        return new Thread(r, "Checker");
+                    }
+                }, new ThreadPoolExecutor.CallerRunsPolicy());
+        _checkQueue = new LinkedBlockingQueue<FileUploadTask>();
     }
 
     @Override
@@ -42,10 +61,16 @@ public class FileSyncTaskProducer implements Runnable {
                 _logger.info("Start scanning source files...");
                 execute();
                 if (!_settings.daemonEnabled()) {
+                    _checkThreadPool.shutdown();
+                    _checkThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
+                    int nbWorkers = _settings.numberOfWorkers();
+                    for (int i = 0; i < nbWorkers; i++) {
+                        _queue.put(new PoisonTask());
+                    }
                     break;
                 }
                 Thread.sleep(_settings.daemonScanInterval());
-                while (!_queue.isEmpty()) {
+                while (_checkThreadPool.getActiveCount() > 0 || !_checkQueue.isEmpty() || !_queue.isEmpty()) {
                     _logger.info("Task queue is not empty. Wait for " + (_settings.daemonScanInterval() / 1000)
                             + " seconds...");
                     Thread.sleep(_settings.daemonScanInterval());
@@ -54,6 +79,7 @@ public class FileSyncTaskProducer implements Runnable {
         } catch (Throwable e) {
             if (_logger != null) {
                 if (e instanceof InterruptedException) {
+                    _checkThreadPool.shutdownNow();
                     _logger.info("Thread interrupted. Stopped scanning source files.");
                 } else {
                     _logger.log(Level.SEVERE, e.getMessage(), e);
@@ -81,8 +107,16 @@ public class FileSyncTaskProducer implements Runnable {
                 try {
                     if (_filter == null || _filter.acceptFile(file, attrs)) {
                         if (job.matchPath(file)) {
-                            _queue.put(new FileUploadTask(_session, _logger, file, job.directory(), job.namespace(),
-                                    _settings.csumCheck(), _ul));
+                            _checkQueue.put(new FileUploadTask(_session, _logger, file, job.directory(),
+                                    job.namespace(), _settings.csumCheck(), _ul));
+                            if (_checkQueue.size() >= _checkBatchSize) {
+                                List<FileUploadTask> tasks = new ArrayList<FileUploadTask>();
+                                int nbTasks = _checkQueue.drainTo(tasks, _checkBatchSize);
+                                if (!tasks.isEmpty()) {
+                                    _logger.info("Submitting " + nbTasks + " files to check...");
+                                    _checkThreadPool.submit(new FileCheckTask(_session, _logger, tasks, _queue, _ul));
+                                }
+                            }
                         }
                     }
                 } catch (Throwable e) {
@@ -134,6 +168,14 @@ public class FileSyncTaskProducer implements Runnable {
                 }
             }
         });
+        while (!_checkQueue.isEmpty()) {
+            List<FileUploadTask> tasks = new ArrayList<FileUploadTask>();
+            int nbTasks = _checkQueue.drainTo(tasks, _checkBatchSize);
+            if (!tasks.isEmpty()) {
+                _logger.info("submitting " + nbTasks + " files to check...");
+                _checkThreadPool.submit(new FileCheckTask(_session, _logger, tasks, _queue, _ul));
+            }
+        }
     }
 
 }

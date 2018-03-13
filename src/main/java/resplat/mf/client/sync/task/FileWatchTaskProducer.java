@@ -30,6 +30,7 @@ import arc.xml.XmlStringWriter;
 import resplat.mf.client.file.Filter;
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.sync.MFSyncSettings;
+import resplat.mf.client.task.Task;
 import resplat.mf.client.util.HasAbortableOperation;
 import resplat.mf.client.util.LoggingUtils;
 import resplat.mf.client.util.OSUtils;
@@ -66,7 +67,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
 
     private Logger _logger;
 
-    private BlockingQueue<SyncTask> _queue;
+    private BlockingQueue<Task> _queue;
 
     private WatchService _watcher;
     private Map<WatchKey, Path> _watchKeys;
@@ -76,7 +77,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
     private Filter _filter;
 
     public FileWatchTaskProducer(MFSession session, Logger logger, MFSyncSettings settings, FileUploadListener ul,
-            BlockingQueue<SyncTask> queue) throws IOException {
+            BlockingQueue<Task> queue) throws IOException {
         _session = session;
 
         _settings = settings;

@@ -36,10 +36,9 @@ import resplat.mf.client.file.Filter;
 import resplat.mf.client.session.MFSession;
 import resplat.mf.client.sync.task.FileSyncTaskProducer;
 import resplat.mf.client.sync.task.FileUploadListener;
-import resplat.mf.client.sync.task.PoisonTask;
-import resplat.mf.client.sync.task.SyncTask;
 import resplat.mf.client.sync.task.TaskConsumer;
 import resplat.mf.client.task.Loggable;
+import resplat.mf.client.task.Task;
 import resplat.mf.client.util.LoggingUtils;
 
 public class MFSync implements Runnable, Loggable, FileUploadListener {
@@ -66,7 +65,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
 
     private Logger _logger;
 
-    private BlockingQueue<SyncTask> _queue;
+    private BlockingQueue<Task> _queue;
 
     private ExecutorService _producerThreadPool;
 
@@ -104,7 +103,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
             throw new RuntimeException("Failed to create logger: " + e.getMessage(), e);
         }
 
-        _queue = new LinkedBlockingQueue<SyncTask>();
+        _queue = new LinkedBlockingQueue<Task>();
 
         _producerThreadPool = Executors.newSingleThreadExecutor(new ThreadFactory() {
 
@@ -199,10 +198,10 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
 
                 _producerThreadPool.shutdown();
                 _producerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
-                int nbWorkers = _settings.numberOfWorkers();
-                for (int i = 0; i < nbWorkers; i++) {
-                    _queue.put(new PoisonTask());
-                }
+//                int nbWorkers = _settings.numberOfWorkers();
+//                for (int i = 0; i < nbWorkers; i++) {
+//                    _queue.put(new PoisonTask());
+//                }
                 _consumerThreadPool.shutdown();
                 _consumerThreadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.DAYS);
                 printSummary(System.out);

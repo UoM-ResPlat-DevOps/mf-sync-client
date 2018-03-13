@@ -32,13 +32,30 @@ public class FileUploadTask extends SyncTask {
 
     private long _bytesUploaded = 0;
 
+    private String _assetPath;
+
+    private String _assetId;
+
     public FileUploadTask(MFSession session, Logger logger, Path file, Path rootDir, String rootNS, boolean csumCheck,
             FileUploadListener ul) {
         super(session, logger, rootDir, rootNS);
         _file = file;
+        _assetPath = PathUtils.join(rootNS, PathUtils.relativePath(rootDir, _file));
         _csumCheck = csumCheck;
         _csum = 0;
         _ul = ul;
+    }
+
+    public String assetPath() {
+        return _assetPath;
+    }
+
+    void setAssetId(String assetId) {
+        _assetId = assetId;
+    }
+
+    public Path file() {
+        return _file;
     }
 
     @Override
@@ -49,52 +66,10 @@ public class FileUploadTask extends SyncTask {
             }
             PosixAttributes fileAttrs = null;
             long fileSize = Files.size(_file);
-            String assetPath = PathUtils.join(rootNamespace(), PathUtils.relativePath(rootDirectory(), _file));
-            String assetId = null;
-            // check if asset exists
-            XmlStringWriter w1 = new XmlStringWriter();
-            w1.add("id", "path=" + assetPath);
-            boolean assetExists = session.execute("asset.exists", w1.document(), null, null, this)
-                    .booleanValue("exists");
-            boolean softDestroyed = false;
-            if (assetExists) {
-                setCurrentOperation("Retrieving metadata of asset: " + assetPath);
-                XmlDoc.Element ae = session.execute("asset.get", w1.document(), null, null, this).element("asset");
-                softDestroyed = ae.booleanValue("@destroyed", false);
-                assetId = ae.value("@id");
-                // @formatter:off
-                // long assetCSUM = ae.longValue("content/csum[@base='16']", 0L, 16);
-                // @formatter:on
-                if (ae.elementExists("content") && ae.elementExists("meta/" + PosixAttributes.DOC_TYPE)) {
-                    long assetContentSize = ae.longValue("content/size");
-                    if (assetContentSize == fileSize) {
-                        PosixAttributes attrs = new PosixAttributes(ae.element("meta/" + PosixAttributes.DOC_TYPE));
-                        fileAttrs = PosixAttributes.read(_file);
-                        if ((fileAttrs.mtimeEquals(attrs) || fileAttrs.mtimeLessThan(attrs))) {
-                            // local file mtime <= server file mtime
-                            // file on the server side is newer
-                            // @formatter:off
-                            // if (!_csumCheck || assetCSUM == ChecksumUtils.getCRC32Value(_file)) {
-                            if (softDestroyed) {
-                                undestroy(session, assetId);
-                            }
-                            logInfo("Skipped file: '" + _file + "'. Asset: '" + assetPath + "' already exists.");
-                            setWorkTotal(1);
-                            setWorkProgressed(1);
-                            if (_ul != null) {
-                                _ul.fileUploadSkipped(_file);
-                            }
-                            return;
-                            // }
-                            // @formatter:on
-                        }
-                    }
-                }
-            }
 
             XmlStringWriter w2 = new XmlStringWriter();
             w2.push("service", new String[] { "name", "asset.set" });
-            w2.add("id", "path=" + assetPath);
+            w2.add("id", "path=" + _assetPath);
             w2.add("create", true);
             w2.push("meta", new String[] { "action", "replace" });
             if (fileAttrs == null) {
@@ -106,7 +81,7 @@ public class FileUploadTask extends SyncTask {
 
             if (_csumCheck) {
                 w2.push("service", new String[] { "name", "asset.get" });
-                w2.add("id", assetId == null ? ("path=" + assetPath) : assetId);
+                w2.add("id", "path=" + _assetPath);
                 w2.pop();
             }
 
@@ -143,18 +118,16 @@ public class FileUploadTask extends SyncTask {
                     }
                 }
             };
-            setCurrentOperation("Uploading file: " + _file + " (" + (assetExists ? "Updating" : "Creating") + " asset: "
-                    + assetPath + ")");
-            logInfo("Uploading file: '" + _file + "' to asset" + (assetId == null ? "" : (" " + assetId)) + ": '"
-                    + assetPath + "'");
+            setCurrentOperation("Uploading file: '" + _file + "' to asset: '" + _assetPath + "'");
+            logInfo("Uploading file: '" + _file + "' to asset: '" + _assetPath + "'");
             XmlDoc.Element re = session.execute("service.execute", w2.document(), input, null, this);
             if (_csumCheck) {
                 XmlDoc.Element ae = re.element("reply[@service='asset.get']/response/asset");
-                assetId = re.value("id");
+                _assetId = re.value("id");
                 long assetCSUM = ae.longValue("content/csum[@base='16']", 0L, 16);
                 if (_csum != assetCSUM) {
                     logWarning("CRC32 checksums do not match for file: '" + _file + "'(" + _csum + ") and asset: '"
-                            + (assetId == null ? assetPath : assetId) + "'(" + assetCSUM + ")");
+                            + _assetPath + "'(" + assetCSUM + ")");
                     _csum = 0;
                     if (_retry > 0) {
                         _retry--;
@@ -163,21 +136,18 @@ public class FileUploadTask extends SyncTask {
                         return;
                     } else {
                         throw new Exception("CRC32 checksums do not match for file: '" + _file + "'(" + _csum
-                                + ") and asset: '" + (assetId == null ? assetPath : assetId) + "'(" + assetCSUM + ")");
+                                + ") and asset: '" + _assetPath + "'(" + assetCSUM + ")");
                     }
                 }
             } else {
                 if (re.elementExists("reply[@service='asset.set']/response/id")) {
-                    assetId = re.value("reply[@service='asset.set']/response/id");
+                    _assetId = re.value("reply[@service='asset.set']/response/id");
                 } else if (re.elementExists("reply[@service='asset.set']/response/version")) {
-                    assetId = re.value("reply[@service='asset.set']/response/version/@id");
+                    _assetId = re.value("reply[@service='asset.set']/response/version/@id");
                 }
             }
-            if (softDestroyed) {
-                undestroy(session, assetId == null ? ("path=" + assetPath) : assetId);
-            }
             if (_ul != null) {
-                _ul.fileUploadCompleted(_file, assetId);
+                _ul.fileUploadCompleted(_file, _assetId);
             }
         } catch (Throwable e) {
             if (_ul != null) {
@@ -196,12 +166,6 @@ public class FileUploadTask extends SyncTask {
             incWorkProgress(-1 * _bytesUploaded);
             _bytesUploaded = 0;
         }
-    }
-
-    private void undestroy(MFSession session, String assetId) throws Throwable {
-        XmlStringWriter w = new XmlStringWriter();
-        w.add("id", assetId);
-        session.execute("asset.soft.undestroy", w.document(), null, null, this);
     }
 
     @Override
