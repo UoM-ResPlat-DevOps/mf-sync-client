@@ -43,26 +43,29 @@ public class MFSyncSettings {
         private Path _dir;
         private String _ns;
         private int _projectNumber;
+        private boolean _projectIsParent = false;
 
         public Job(Type type, Path dir, String ns, boolean isParentNS, Collection<String> includes,
                 Collection<String> excludes) {
-            this(type, dir, ns, isParentNS, 0, includes, excludes);
+            this(type, dir, ns, isParentNS, 0, false, includes, excludes);
         }
 
-        public Job(Type type, Path dir, int projectNumber, Collection<String> includes, Collection<String> excludes) {
-            this(type, dir, null, true, projectNumber, includes, excludes);
-        }
-
-        Job(Type type, Path dir, String ns, boolean isParentNS, int projectNumber, Collection<String> includes,
+        public Job(Type type, Path dir, int projectNumber, boolean projectIsParent, Collection<String> includes,
                 Collection<String> excludes) {
+            this(type, dir, null, false, projectNumber, projectIsParent, includes, excludes);
+        }
+
+        Job(Type type, Path dir, String ns, boolean isParentNS, int projectNumber, boolean projectIsParent,
+                Collection<String> includes, Collection<String> excludes) {
             _type = type;
             _dir = dir == null ? null : dir.toAbsolutePath();
-            if (isParentNS) {
-                _ns = PathUtils.join(ns, _dir.getFileName().toString());
-            } else {
+            if (ns == null || !isParentNS) {
                 _ns = ns;
+            } else {
+                _ns = PathUtils.join(ns, _dir.getFileName().toString());
             }
             _projectNumber = projectNumber;
+            _projectIsParent = projectIsParent;
             if (includes != null && !includes.isEmpty()) {
                 _pathIncludes = new LinkedHashSet<String>();
                 _pathIncludes.addAll(includes);
@@ -84,6 +87,7 @@ public class MFSyncSettings {
                 _ns = je.value("namespace");
             }
             _projectNumber = je.intValue("project", 0);
+            _projectIsParent = je.booleanValue("project/@parent", false);
             if (je.elementExists("include")) {
                 _pathIncludes = new LinkedHashSet<String>();
                 _pathIncludes.addAll(je.values("include"));
@@ -106,12 +110,20 @@ public class MFSyncSettings {
             return _ns;
         }
 
-        void setNamespace(String namespace) {
-            _ns = namespace;
+        void setProjectNamespace(String projectNamespace) {
+            if (_projectIsParent) {
+                _ns = PathUtils.join(projectNamespace, _dir.getFileName().toString());
+            } else {
+                _ns = projectNamespace;
+            }
         }
 
         public int projectNumber() {
             return _projectNumber;
+        }
+
+        public boolean projectIsParent() {
+            return _projectIsParent;
         }
 
         public Set<String> excludes() {
@@ -244,13 +256,13 @@ public class MFSyncSettings {
         return addJob(new Job(Job.Type.UPLOAD, directory, namespace, isParentNS, includes, excludes));
     }
 
-    public MFSyncSettings addUploadJob(Path directory, int projectNumber) {
-        return addUploadJob(directory, projectNumber, null, null);
+    public MFSyncSettings addUploadJob(Path directory, int projectNumber, boolean projectIsParent) {
+        return addUploadJob(directory, projectNumber, projectIsParent, null, null);
     }
 
-    public MFSyncSettings addUploadJob(Path directory, int projectNumber, Collection<String> includes,
-            Collection<String> excludes) {
-        return addJob(new Job(Job.Type.UPLOAD, directory, projectNumber, includes, excludes));
+    public MFSyncSettings addUploadJob(Path directory, int projectNumber, boolean projectIsParent,
+            Collection<String> includes, Collection<String> excludes) {
+        return addJob(new Job(Job.Type.UPLOAD, directory, projectNumber, projectIsParent, includes, excludes));
     }
 
     public MFSyncSettings addJob(Job job) {
@@ -368,7 +380,10 @@ public class MFSyncSettings {
                     throw new IllegalArgumentException(
                             "Destination project " + job.projectNumber() + " or its namespace does not exist.");
                 }
-                job.setNamespace(ns);
+                if (!AssetNamespaceUtils.assetNamespaceExists(session, ns)) {
+                    throw new IllegalArgumentException("Destination project namespace: '" + ns + "' does not exist.");
+                }
+                job.setProjectNamespace(ns);
             } else {
                 if (!AssetNamespaceUtils.assetNamespaceExists(session, job.parentNamespace())) {
                     throw new IllegalArgumentException(

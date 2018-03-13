@@ -36,7 +36,7 @@
 		</settings>
 		<job type="upload">
 			<directory>/path/to/src-directory1</directory>
-			<project>51</project>
+			<project parent="true">51</project>
 			<include>wilson*/**</include>
 			<exclude>**/.DS_Store</exclude>
 		</job>
