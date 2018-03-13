@@ -4,7 +4,7 @@
 
 	<groupId>au.edu.unimelb.resplat</groupId>
 	<artifactId>mf-sync-client</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1</version>
 	<packaging>jar</packaging>
 	<name>mf-sync-client</name>
 	<url>https://github.com/UoM-ResPlat-DevOps/mf-sync-client</url>
