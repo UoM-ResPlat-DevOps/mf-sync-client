@@ -58,6 +58,10 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
     public static final int DEFAULT_DAEMON_LISTENER_PORT = 9761;
 
     public static final int DEFAULT_DAEMON_SCAN_INTERVAL = 60000; // milliseconds
+    
+    public static final int DEFAULT_CHECK_BATCH_SIZE = 100;
+    
+    public static final int DEFAULT_MAX_NUMBER_OF_CHECKERS = 4;
 
     private MFSession _session;
 

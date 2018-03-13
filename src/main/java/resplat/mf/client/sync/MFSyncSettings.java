@@ -188,6 +188,8 @@ public class MFSyncSettings {
     private List<Job> _jobs;
 
     private int _numberOfWorkers = 1;
+    private int _maxNumberOfCheckers = 4;
+    private int _checkBatchSize = 100;
     private boolean _daemonEnabled = false;
     private int _daemonListenerPort = MFSync.DEFAULT_DAEMON_LISTENER_PORT;
     private int _daemonScanInterval = MFSync.DEFAULT_DAEMON_SCAN_INTERVAL;
@@ -227,6 +229,21 @@ public class MFSyncSettings {
                     "No sync element is found in the properties XML element. Invalid/Incomplete configuration file.");
         }
         _numberOfWorkers = se.intValue("settings/numberOfWorkers", 1);
+
+        _maxNumberOfCheckers = se.intValue("settings/maxNumberOfCheckers", MFSync.DEFAULT_MAX_NUMBER_OF_CHECKERS);
+        if (_maxNumberOfCheckers < 1 || _maxNumberOfCheckers > 8) {
+            System.err.println("Invalid maxNumberOfCheckers: " + _maxNumberOfCheckers + ". Fall back to "
+                    + MFSync.DEFAULT_MAX_NUMBER_OF_CHECKERS + ".");
+            _maxNumberOfCheckers = MFSync.DEFAULT_MAX_NUMBER_OF_CHECKERS;
+        }
+
+        _checkBatchSize = se.intValue("settings/checkBatchSize", MFSync.DEFAULT_CHECK_BATCH_SIZE);
+        if (_checkBatchSize < 1 || _checkBatchSize > 10000) {
+            System.err.println("Invalid checkBatchSize: " + _checkBatchSize + ". Fall back to "
+                    + MFSync.DEFAULT_CHECK_BATCH_SIZE + ".");
+            _checkBatchSize = MFSync.DEFAULT_CHECK_BATCH_SIZE;
+        }
+
         _daemonEnabled = se.booleanValue("settings/daemon/@enabled", false);
         _daemonListenerPort = se.intValue("settings/daemon/listenerPort", MFSync.DEFAULT_DAEMON_LISTENER_PORT);
         _daemonScanInterval = se.intValue("settings/daemon/scanInterval", MFSync.DEFAULT_DAEMON_SCAN_INTERVAL);
@@ -331,6 +348,32 @@ public class MFSyncSettings {
 
     public int daemonScanInterval() {
         return _daemonScanInterval;
+    }
+
+    public MFSyncSettings setMaxNumberOfCheckers(int maxNumberOfCheckers) {
+        if (maxNumberOfCheckers >= 1 && maxNumberOfCheckers <= 8) {
+            _maxNumberOfCheckers = maxNumberOfCheckers;
+        } else {
+            _maxNumberOfCheckers = MFSync.DEFAULT_MAX_NUMBER_OF_CHECKERS;
+        }
+        return this;
+    }
+
+    public int maxNumberOfCheckers() {
+        return _maxNumberOfCheckers;
+    }
+
+    public MFSyncSettings setCheckBatchSize(int checkBatchSize) {
+        if (checkBatchSize >= 1 && checkBatchSize <= 10000) {
+            _checkBatchSize = checkBatchSize;
+        } else {
+            _checkBatchSize = MFSync.DEFAULT_CHECK_BATCH_SIZE;
+        }
+        return this;
+    }
+
+    public int checkBatchSize() {
+        return _checkBatchSize;
     }
 
     public MFSyncSettings setCsumCheck(boolean csumCheck) {

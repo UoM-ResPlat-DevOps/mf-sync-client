@@ -29,7 +29,6 @@ public class FileSyncTaskProducer implements Runnable {
 
     private ThreadPoolExecutor _checkThreadPool;
     private BlockingQueue<FileUploadTask> _checkQueue;
-    private int _checkBatchSize = 100;
 
     private MFSyncSettings _settings;
     private FileUploadListener _ul;
@@ -43,8 +42,8 @@ public class FileSyncTaskProducer implements Runnable {
         _settings = settings;
         _ul = ul;
         _queue = queue;
-        _checkThreadPool = new ThreadPoolExecutor(1, 4, 0, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>(),
-                new ThreadFactory() {
+        _checkThreadPool = new ThreadPoolExecutor(1, _settings.maxNumberOfCheckers(), 0, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
 
                     @Override
                     public Thread newThread(Runnable r) {
@@ -109,9 +108,9 @@ public class FileSyncTaskProducer implements Runnable {
                         if (job.matchPath(file)) {
                             _checkQueue.put(new FileUploadTask(_session, _logger, file, job.directory(),
                                     job.namespace(), _settings.csumCheck(), _ul));
-                            if (_checkQueue.size() >= _checkBatchSize) {
+                            if (_checkQueue.size() >= _settings.checkBatchSize()) {
                                 List<FileUploadTask> tasks = new ArrayList<FileUploadTask>();
-                                int nbTasks = _checkQueue.drainTo(tasks, _checkBatchSize);
+                                int nbTasks = _checkQueue.drainTo(tasks, _settings.checkBatchSize());
                                 if (!tasks.isEmpty()) {
                                     _logger.info("Submitting " + nbTasks + " files to check...");
                                     _checkThreadPool.submit(new FileCheckTask(_session, _logger, tasks, _queue, _ul));
@@ -170,9 +169,9 @@ public class FileSyncTaskProducer implements Runnable {
         });
         while (!_checkQueue.isEmpty()) {
             List<FileUploadTask> tasks = new ArrayList<FileUploadTask>();
-            int nbTasks = _checkQueue.drainTo(tasks, _checkBatchSize);
+            int nbTasks = _checkQueue.drainTo(tasks, _settings.checkBatchSize());
             if (!tasks.isEmpty()) {
-                _logger.info("submitting " + nbTasks + " files to check...");
+                _logger.info("Submitting " + nbTasks + " files to check...");
                 _checkThreadPool.submit(new FileCheckTask(_session, _logger, tasks, _queue, _ul));
             }
         }

@@ -64,6 +64,7 @@ public class FileCheckTask extends AbstractTask {
                 List<String> undestroy = new ArrayList<String>();
                 List<FileUploadTask> update = new ArrayList<FileUploadTask>();
                 List<XmlDoc.Element> aes = session.execute("asset.get", w2.document(), null, null).elements("asset");
+                int nbSkipped = 0;
                 for (XmlDoc.Element ae : aes) {
 
                     String assetId = ae.value("@id");
@@ -122,7 +123,8 @@ public class FileCheckTask extends AbstractTask {
 //                    }
                     // @formatter:on
 
-                    logInfo("Skipped file: '" + file + "'. Asset: '" + assetPath + "' already exists.");
+                    // logInfo("Skipped file: '" + file + "'. Asset: '" + assetPath + "' already exists.");
+                    nbSkipped ++;
                     if (_ul != null) {
                         _ul.fileUploadSkipped(file);
                     }
@@ -140,6 +142,7 @@ public class FileCheckTask extends AbstractTask {
                         _queue.put(task);
                     }
                 }
+                logInfo("Skipped " + nbSkipped + " files that already exist in Mediaflux.");
             }
             setWorkProgressed(_tasks.size());
         }
