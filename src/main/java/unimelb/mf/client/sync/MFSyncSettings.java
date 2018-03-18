@@ -1,4 +1,4 @@
-package resplat.mf.client.sync;
+package unimelb.mf.client.sync;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,11 +16,11 @@ import java.util.List;
 import java.util.Set;
 
 import arc.xml.XmlDoc;
-import resplat.mf.client.project.VicNodeProject;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.AssetNamespaceUtils;
-import resplat.mf.client.util.PathPattern;
-import resplat.mf.client.util.PathUtils;
+import unimelb.mf.client.project.VicNodeProject;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.util.AssetNamespaceUtils;
+import unimelb.mf.client.util.PathPattern;
+import unimelb.mf.client.util.PathUtils;
 
 /**
  * See src/main/config/mf-sync-properties.sample.xml

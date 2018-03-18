@@ -1,11 +1,11 @@
-package resplat.mf.client.task;
+package unimelb.mf.client.task;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import arc.utils.CanAbort;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.LoggingUtils;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.util.LoggingUtils;
 
 public abstract class AbstractTask implements Task {
 

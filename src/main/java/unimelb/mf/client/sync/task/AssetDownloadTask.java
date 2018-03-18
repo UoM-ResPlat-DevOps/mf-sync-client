@@ -1,4 +1,4 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
@@ -12,9 +12,9 @@ import arc.mf.client.ServerClient;
 import arc.streams.LongInputStream;
 import arc.xml.XmlDoc.Element;
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.file.PosixAttributes;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.PathUtils;
+import unimelb.mf.client.file.PosixAttributes;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.util.PathUtils;
 
 public class AssetDownloadTask extends SyncTask {
 

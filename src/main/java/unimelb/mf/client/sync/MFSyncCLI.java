@@ -1,12 +1,12 @@
-package resplat.mf.client.sync;
+package unimelb.mf.client.sync;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import resplat.mf.client.session.MFConnectionSettings;
-import resplat.mf.client.session.MFSession;
+import unimelb.mf.client.session.MFConnectionSettings;
+import unimelb.mf.client.session.MFSession;
 
 public class MFSyncCLI {
 

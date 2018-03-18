@@ -1,11 +1,11 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import resplat.mf.client.task.Task;
-import resplat.mf.client.util.LoggingUtils;
+import unimelb.mf.client.task.Task;
+import unimelb.mf.client.util.LoggingUtils;
 
 public class TaskConsumer implements Runnable {
 

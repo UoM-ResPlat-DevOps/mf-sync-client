@@ -1,4 +1,4 @@
-package resplat.mf.client.file;
+package unimelb.mf.client.file;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +19,7 @@ import java.util.Set;
 
 import arc.xml.XmlDoc;
 import arc.xml.XmlWriter;
-import resplat.mf.client.util.OSUtils;
+import unimelb.mf.client.util.OSUtils;
 
 public class PosixAttributes {
 

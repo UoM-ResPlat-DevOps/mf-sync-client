@@ -1,4 +1,4 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
@@ -27,14 +27,14 @@ import java.util.logging.Logger;
 import arc.utils.CanAbort;
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.file.Filter;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.sync.MFSyncSettings;
-import resplat.mf.client.task.Task;
-import resplat.mf.client.util.HasAbortableOperation;
-import resplat.mf.client.util.LoggingUtils;
-import resplat.mf.client.util.OSUtils;
-import resplat.mf.client.util.PathUtils;
+import unimelb.mf.client.file.Filter;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.sync.MFSyncSettings;
+import unimelb.mf.client.task.Task;
+import unimelb.mf.client.util.HasAbortableOperation;
+import unimelb.mf.client.util.LoggingUtils;
+import unimelb.mf.client.util.OSUtils;
+import unimelb.mf.client.util.PathUtils;
 
 /**
  * 

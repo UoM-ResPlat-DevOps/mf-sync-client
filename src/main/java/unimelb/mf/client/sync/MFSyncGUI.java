@@ -1,4 +1,4 @@
-package resplat.mf.client.sync;
+package unimelb.mf.client.sync;
 
 public class MFSyncGUI {
     // TODO 

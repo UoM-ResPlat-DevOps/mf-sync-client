@@ -1,4 +1,4 @@
-package resplat.mf.client.util;
+package unimelb.mf.client.util;
 
 import arc.utils.CanAbort;
 

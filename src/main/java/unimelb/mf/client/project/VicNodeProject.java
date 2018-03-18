@@ -1,7 +1,7 @@
-package resplat.mf.client.project;
+package unimelb.mf.client.project;
 
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.session.MFSession;
+import unimelb.mf.client.session.MFSession;
 
 public class VicNodeProject {
 

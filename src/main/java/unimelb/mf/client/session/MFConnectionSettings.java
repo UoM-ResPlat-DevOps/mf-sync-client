@@ -1,4 +1,4 @@
-package resplat.mf.client.session;
+package unimelb.mf.client.session;
 
 import java.io.BufferedReader;
 import java.io.File;

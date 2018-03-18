@@ -1,4 +1,4 @@
-package resplat.mf.client.task;
+package unimelb.mf.client.task;
 
 public interface HasProgress {
 

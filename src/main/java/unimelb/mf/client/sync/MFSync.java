@@ -1,4 +1,4 @@
-package resplat.mf.client.sync;
+package unimelb.mf.client.sync;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -32,14 +32,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.file.Filter;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.sync.task.FileSyncTaskProducer;
-import resplat.mf.client.sync.task.FileUploadListener;
-import resplat.mf.client.sync.task.TaskConsumer;
-import resplat.mf.client.task.Loggable;
-import resplat.mf.client.task.Task;
-import resplat.mf.client.util.LoggingUtils;
+import unimelb.mf.client.file.Filter;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.sync.task.FileSyncTaskProducer;
+import unimelb.mf.client.sync.task.FileUploadListener;
+import unimelb.mf.client.sync.task.TaskConsumer;
+import unimelb.mf.client.task.Loggable;
+import unimelb.mf.client.task.Task;
+import unimelb.mf.client.util.LoggingUtils;
 
 public class MFSync implements Runnable, Loggable, FileUploadListener {
 

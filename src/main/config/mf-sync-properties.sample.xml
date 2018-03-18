@@ -1,17 +1,25 @@
 <?xml version="1.0"?>
 <properties>
 	<server>
+		<!-- Mediaflux server host -->
 		<host>mediaflux.vicnode.org.au</host>
+		<!-- Mediaflux server port -->
 		<port>443</port>
+		<!-- Mediaflux server transport. https, http or tcp/ip -->
 		<protocol>https</protocol>
 		<session>
-			<connectRetryTimes>5</connectRetryTimes>
+			<!-- Retry times on Mediaflux connection failure -->
+			<connectRetryTimes>1</connectRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
 			<connectRetryInterval>1000</connectRetryInterval>
-			<executeRetryTimes>5</executeRetryTimes>
+			<!-- Retry times on service execution error -->
+			<executeRetryTimes>1</executeRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
 			<executeRetryInterval>1000</executeRetryInterval>
 		</session>
 	</server>
 	<credential>
+		<!-- Application name. Can be used for generate secure identity token -->
 		<app>mf-sync</app>
 		<domain>system</domain>
 		<user>wilson</user>
@@ -32,7 +40,7 @@
 			</daemon>
 			<logDirectory>/tmp</logDirectory>
 			<excludeEmptyFolder>true</excludeEmptyFolder>
-			
+
 			<notification>
 				<email>wliu5@unimelb.edu.au</email>
 			</notification>

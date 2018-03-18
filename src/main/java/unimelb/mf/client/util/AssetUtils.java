@@ -1,8 +1,8 @@
-package resplat.mf.client.util;
+package unimelb.mf.client.util;
 
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.session.MFSession;
+import unimelb.mf.client.session.MFSession;
 
 public class AssetUtils {
 

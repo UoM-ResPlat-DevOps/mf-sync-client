@@ -1,4 +1,4 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,10 +13,10 @@ import java.util.logging.Logger;
 
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.file.PosixAttributes;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.task.AbstractTask;
-import resplat.mf.client.task.Task;
+import unimelb.mf.client.file.PosixAttributes;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.task.AbstractTask;
+import unimelb.mf.client.task.Task;
 
 public class FileCheckTask extends AbstractTask {
 

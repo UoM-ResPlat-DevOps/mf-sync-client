@@ -1,10 +1,10 @@
-package resplat.mf.client.task;
+package unimelb.mf.client.task;
 
 import java.util.concurrent.Callable;
 import java.util.logging.Logger;
 
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.HasAbortableOperation;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.util.HasAbortableOperation;
 
 public interface Task extends Callable<Void>, Loggable, HasProgress, HasAbortableOperation {
 

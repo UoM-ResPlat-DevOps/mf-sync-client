@@ -1,4 +1,4 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import java.nio.file.Path;
 

@@ -1,4 +1,4 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -16,10 +16,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import resplat.mf.client.file.Filter;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.sync.MFSyncSettings;
-import resplat.mf.client.task.Task;
+import unimelb.mf.client.file.Filter;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.sync.MFSyncSettings;
+import unimelb.mf.client.task.Task;
 
 public class FileSyncTaskProducer implements Runnable {
 

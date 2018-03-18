@@ -1,4 +1,4 @@
-package resplat.mf.client.util;
+package unimelb.mf.client.util;
 
 /**
  * This class follows the pattern syntax of ANT.

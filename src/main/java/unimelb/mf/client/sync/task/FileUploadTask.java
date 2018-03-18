@@ -1,4 +1,4 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -14,9 +14,9 @@ import arc.mf.client.ServerClient;
 import arc.streams.StreamCopy.AbortCheck;
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.file.PosixAttributes;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.PathUtils;
+import unimelb.mf.client.file.PosixAttributes;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.util.PathUtils;
 
 public class FileUploadTask extends SyncTask {
 

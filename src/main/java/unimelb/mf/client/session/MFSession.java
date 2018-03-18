@@ -1,4 +1,4 @@
-package resplat.mf.client.session;
+package unimelb.mf.client.session;
 
 import java.util.Arrays;
 import java.util.Timer;
@@ -11,7 +11,7 @@ import arc.mf.client.ServerClient;
 import arc.utils.AbortableOperationHandler;
 import arc.utils.CanAbort;
 import arc.xml.XmlDoc;
-import resplat.mf.client.util.HasAbortableOperation;
+import unimelb.mf.client.util.HasAbortableOperation;
 
 public class MFSession {
 

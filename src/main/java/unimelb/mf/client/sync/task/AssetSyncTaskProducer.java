@@ -1,4 +1,4 @@
-package resplat.mf.client.sync.task;
+package unimelb.mf.client.sync.task;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,10 +11,10 @@ import java.util.logging.Logger;
 
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
-import resplat.mf.client.file.PosixAttributes;
-import resplat.mf.client.session.MFSession;
-import resplat.mf.client.util.LoggingUtils;
-import resplat.mf.client.util.PathUtils;
+import unimelb.mf.client.file.PosixAttributes;
+import unimelb.mf.client.session.MFSession;
+import unimelb.mf.client.util.LoggingUtils;
+import unimelb.mf.client.util.PathUtils;
 
 public class AssetSyncTaskProducer implements Runnable {
 
