@@ -157,9 +157,10 @@ The **mf-sync** loads the configuration file in the following order:
 
 ## 3. Examples:
 
-1. Run **mf-sync** to upload directory **/data/src-dir1** to asset namespace **/projects/cryo-em/proj-abc-1128.4.66**
+### 3.1. Upload single directory
 
-  * option 1:  using configuration file:
+To upload directory **/data/src-dir1** to asset namespace **/projects/cryo-em/proj-abc-1128.4.66**
+  * **option 1**:  using configuration file:
 ```xml
 <sync>
     <job type="upload">
@@ -168,10 +169,12 @@ The **mf-sync** loads the configuration file in the following order:
     </job>
 </sync>
 ```
-  * option 2: using command arguments:
+  * **option 2**: using command arguments:
     * **`mf-sync /data/src-dir1 /projects/cryo-em/proj-abc-1128.4.66`**
-2. Run **mf-sync** as daemon:
-  * option 1: using configuration file:
+
+### 3.2. Run **mf-sync** as daemon:
+
+  * **option 1**: using configuration file:
 ```xml
 <sync>
     <settings>
@@ -182,9 +185,12 @@ The **mf-sync** loads the configuration file in the following order:
     </settings>
 </sync>
 ```
-    * option 2: using command arguments:
-      * **`mf-sync --daemon --daemon-port 9761 --daemon-scan-interval 60000`**
-3. Upload multiple directories. You can only achieve this by using the configuration file.
+  * **option 2**: using command arguments:
+    * **`mf-sync --daemon --daemon-port 9761 --daemon-scan-interval 60000`**
+
+### 3.3. Upload multiple directories
+
+You can only achieve this by using the configuration file.
 ```xml
 <sync>
     <job type="upload">
@@ -198,21 +204,38 @@ The **mf-sync** loads the configuration file in the following order:
 </sync>
 ```
 
-### mf-sync-daemon
+### 3.4. Upload matching files/directories by specifying pattern selectors/filters
 
-**mf-sync-daemon** is a wrapper shell script to run the **mf-sync** tool as daemon to monitor the changes in the specified directory. It is equivalent to:
-
+  * Upload all (direct) sub-directories with name starts with _**wilson**_; and exclude all files with name _**.DS_Store**_
+```xml
+<sync>
+    <job type="upload">
+        <directory>/data/raw-data</directory>
+	<include>wilson*/**</include>
+	<exclude>**/.DS_Store</exclude>
+        <namespace parent="true">/projects/cryo-em/proj-abc-1128.4.68</namespace>
+    </job>
+</sync>
 ```
-mf-sync --daemon [options] <src-directory> <dst-asset-namespace>
+
+### 3.5. Configure to send notification emails (non-daemon mode)
+```xml
+<sync>
+    <settings>
+        <notification>
+            <email>admin1@your-domain.org</email>
+            <email>admin2@your-domain.org</email>
+	</notification>
+    </settings>
+</sync>
 ```
 
-Additionally, it returns the **pid** (process id). To stop the daemon by **pid**:
+### 3.6. In daemon mode, check the status of the daemon
 
-```
-kill -15 <pid>
-```
+When running **mf-sync** in daemon mode, you can run netcat to send command to the daemon listener port to check the status of the daemon:
+  * **`echo status | nc localhost 9761`**
 
-## III. Configuration
+In the above example, 9761 is the daemon listener port. The **mf-sync** restrict to listen to only localhost. You cannot access the port remotely.
 
  
 
