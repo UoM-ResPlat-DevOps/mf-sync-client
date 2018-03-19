@@ -1,14 +1,44 @@
 # mf-sync-client
-A client application to upload local files to Mediaflux server.
+A client application to upload local files to Mediaflux server. It can also be configured to run as a background daemon to scan for local file changes periodically and upload to remote Mediaflux server.
 
-## I. Installation
+## 1. Installation
 
-  1. Java 8 (JRE or JDK) is required.
+  1. [Java 8](https://java.com/en/download/) must be installed.
   2. Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
-  3. Unzip it to the destination directory:
-    * ```cd opt; sudo unzip ~/Downloads/mf-sync-client-x.x.x.zip```
+  3. Unzip it to the install directory:
+    * **`cd opt; sudo unzip ~/Downloads/mf-sync-client-x.y.z.zip`**
+    * **`sudo ln -s /opt/mf-sync-client-x.y.z /opt/mf-sync-client`**
+  4. (Optionally, if you are using Bash shell) You can edit your **`~/.bashrc`** file to add **mf-sync** to your environment variable.
+    * **`echo "export PATH=/opt/mf-sync-client:$PATH" >> ~/.bashrc`**
 
-## II. Tools
+## 2. Usage
+
+The command `mf-sync` is be executed in a Unix terminal (or Windows Command Prompt window). The command usage is described below:
+
+```
+USAGE:
+    mf-sync [options] [<src-directory> <dst-asset-namespace>]
+
+DESCRIPTION:
+    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. 
+It can also run in background as a daemon to scan for local changes in the directory and upload to the asset namespace.
+
+OPTIONS:
+    --help                               Display help information.
+    --conf <config-file>                 The configuration file. Note: this argument is optional. If not specified, defaults to ~/.mediaflux/mf-sync-properties.xml (or %USERPROFILE%\.mediaflux\mf-sync-properties.xml on Windows).
+
+POSITIONAL ARGUMENTS:
+    <src-directory>                      The source directory.
+    <dst-asset-namespace>                The destination asset namespace.
+Note: If source directory and destination namespace are not specified in command line. They must be specified in the configuration file.
+
+```
+
+### **Examples:**
+
+1. Start **`mf-sync`** and load configuration file from specified location.
+  * **`mf-sync --conf ~/Documents/mf-sync-properties.xml`**
+2. Start **`mf-sync`** (load configuration from default location **`~/.mediaflux/mf-sync-properties.xml`**
 
 ### mf-sync
 
@@ -17,7 +47,8 @@ USAGE:
     mf-sync [options] [src-directory dst-asset-namespace]
 
 DESCRIPTION:
-    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.
+    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. 
+ It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.
 
 OPTIONS:
     --help                               Display help information.
@@ -32,7 +63,8 @@ OPTIONS:
     --exclude-empty-folder               Exclude empty folders.
     --number-of-workers <n>              Number of worker threads to upload the files. Defaults to 1.
     --log-dir <logging-directory>        The directory to save the logs. Defaults to current work directory.
-    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.
+    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties.
+Note: settings in the configuration file can be overridden by the command arguments.
 
 POSITIONAL ARGUMENTS:
     <src-directory>                      The local sourcedirectory to upload/synchronize from.
