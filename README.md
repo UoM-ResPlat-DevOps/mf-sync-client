@@ -1,23 +1,29 @@
 # mf-sync-client
-A client application to upload local files to Mediaflux server.
+A client application to upload local files to Mediaflux server. It can also be configured to run as a background daemon to scan for local file changes periodically and upload to remote Mediaflux server.
 
-## I. Installation
+## 1. Installation
 
-  1. Java 8 (JRE or JDK) is required.
-  2. Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
-  3. Unzip it to the destination directory:
-    * ```cd opt; sudo unzip ~/Downloads/mf-sync-client-x.x.x.zip```
+* [Java 8](https://java.com/en/download/) must be installed.
+* Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
+* Unzip it to the install directory:
+  * **`cd opt; sudo unzip ~/Downloads/mf-sync-client-x.y.z.zip`**
+  * **`sudo ln -s /opt/mf-sync-client-x.y.z /opt/mf-sync-client`**
+* (Optionally, if you are using Bash shell) You can edit your **`~/.bashrc`** file to add **mf-sync** to your environment variable.
+  * **`echo "export PATH=/opt/mf-sync-client:$PATH" >> ~/.bashrc`**
 
-## II. Tools
+## 2. Usage
 
-### mf-sync
+The command `mf-sync` is be executed in a Unix terminal (or Windows Command Prompt). 
 
+### 2.1. Command arguments
+
+The arguments of **mf-sync** are described below:
 ```
 USAGE:
-    mf-sync [options] [src-directory dst-asset-namespace]
+    mf-sync [options] [<src-directory> <dst-asset-namespace>]
 
 DESCRIPTION:
-    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.
+    mf-sync is a tool to upload files and directories to Mediaflux server. It supports also daemon mode, which runs in background to scan for local changes and upload to Mediaflux.
 
 OPTIONS:
     --help                               Display help information.
@@ -26,99 +32,211 @@ OPTIONS:
     --mf.transport <transport>           The Mediaflux server transport, can be http, https or tcp/ip.
     --mf.auth <domain,user,password>     The Mediaflux user authentication deatils.
     --mf.token <token>                   The Mediaflux secure identity token.
-    --mf.sid <sid>                       The Mediaflux session id.
-    --daemon                             Start a daemon to watch the changes in the specified directory.
-    --csum-check                         Validate CRC32 checksum. It will slow down the upload process.
-    --exclude-empty-folder               Exclude empty folders.
-    --number-of-workers <n>              Number of worker threads to upload the files. Defaults to 1.
-    --log-dir <logging-directory>        The directory to save the logs. Defaults to current work directory.
-    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.
+    --conf <config-file>                 The configuration file. Defaults to '~/.mediaflux/mf-sync.properties'
+    --number-of-workers <n>              Number of worker threads to upload the files. If not specified, defaults to 1.
+    --max-checkers <n>                   Maximum number of checker threads to compare local files with Mediaflux assets. If not specified, defaults to 1.
+    --check-batch-size <n>               Batch size for comparing files with Mediaflux assets. Defaults to 100, which checks 100 files within single service request.
+    --exclude-empty-folder               Exclude empty folders. In other words, upload files only.
+    --csum-check                         Validate CRC32 checksum after uploading. It will slow down the proccess.
+    --notification-emails  <a@b.org>     The (comma-separated) email addresses for notification recipients.
+    --log-dir <logging-directory>        The directory for log files. If not specified, defaults to current work directory.
+    --daemon                             Runs as a daemon to periodically scan the changes and upload.
+    --daemon-port                        The listening port of the daemon. Defaults to 9761. It accepts connection from localhost only. It responds to 'status' and 'stop' requests. If 'status', it responds with the current application status; If 'stop', it will shutdown the daemon and exit the application. You can use netcat to send command to the daemon listener port, e.g 'echo status | nc localhost 9761' or to stop the daemon 'echo stop | nc localhost 9761'
+    --daemon-scan-interval               The time interval in milliseconds between scans. Defaults to 60000 (1 minute). It only starts scanning when the daemon is idle. In other words, it skips scans if previous scan or upload has not completed. 
 
 POSITIONAL ARGUMENTS:
-    <src-directory>                      The local sourcedirectory to upload/synchronize from.
-    <dst-asset-namespace>                The remote (parent) destination asset namespace to upload/synchronize to.
+    <src-directory>                      The source directory.
+    <dst-asset-namespace>                The destination (parent) asset namespace.
+    Note: to specify multiple 'source directory' and 'destination asset namespace' pairs, you need to add them to the configuration file as upload jobs.
 ```
 
-### mf-sync-daemon
+### 2.2. Configuration file
 
-**mf-sync-daemon** is a wrapper shell script to run the **mf-sync** tool as daemon to monitor the changes in the specified directory. It is equivalent to:
+Alternative to command line arguments, you can also specify the corresponding properties in a XML configuration file. The advantiages of using configuration file instead of command line arguments are:
+  * you can specify multiple upload jobs (src-dir to dst-namespace pairs) in the configuration file;
+  * you can specify (inclusive or exclusive) filters for each upload job to select files in the source directory in the configuration file;
 
-```
-mf-sync --daemon [options] <src-directory> <dst-asset-namespace>
-```
+The default config file location is **$HOME/.mediaflux/mf-sync-properties.xml** (or **%USERPROFILE%/.mediaflux/mf-sync-properties.xml** on Windows)
+  * On Windows you can create the directory in **Command Prompt** with following command:
+    * ```md %USERPROFILE%/.mediaflux```
 
-Additionally, it returns the **pid** (process id). To stop the daemon by **pid**:
+The **mf-sync** loads the configuration file in the following order:
+  1) try loading the configration file from its default location: _**~/.mediaflux/mf-sync-properties.xml**_;
+  2) if **--conf** argument is specified, load configuration from the file (and it will overwrite the values loaded previously);
+  3) if specified in the command line, it will overwrite the values loaded previously;
 
-```
-kill -15 <pid>
-```
-
-## III. Configuration
-
-  * The default config file location is **$HOME/.mediaflux/mf-sync-properties.xml** (or **%USERPROFILE%/.mediaflux/mf-sync-properties.xml** on Windows)
-    * On Windows you can create the directory in **Command Prompt** with following command:
-      * ```mkdir %USERPROFILE%/.mediaflux```
-  * You can also specify --conf <config-file> to override it.
-  * If config file does not exist and no **--conf** is specified, the required arguments must be specified in the command line.
-  * So the process is: 
-    1. load config file at the default location;
-    2. load config file specified after --conf;
-    3. load settings in the command arguments;
- 
- ### Sample config file
- ```xml
+### **[Sample XML configuration file](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/blob/master/src/main/config/mf-sync-properties.sample.xml) (with property descriptions as comments)**
+```xml
 <?xml version="1.0"?>
 <properties>
 	<server>
-		<host>mediaflux.your-domain.org</host>
+		<!-- Mediaflux server host -->
+		<host>mediaflux.vicnode.org.au</host>
+		<!-- Mediaflux server port -->
 		<port>443</port>
+		<!-- Mediaflux server transport. https, http or tcp/ip -->
 		<protocol>https</protocol>
 		<session>
-			<connectRetryTimes>5</connectRetryTimes>
+			<!-- Retry times on Mediaflux connection failure -->
+			<connectRetryTimes>1</connectRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
 			<connectRetryInterval>1000</connectRetryInterval>
-			<executeRetryTimes>5</executeRetryTimes>
+			<!-- Retry times on service execution error -->
+			<executeRetryTimes>1</executeRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
 			<executeRetryInterval>1000</executeRetryInterval>
 		</session>
 	</server>
 	<credential>
+		<!-- Application name. Can be used as application key for secure identity 
+			token -->
 		<app>mf-sync</app>
-		<domain>domain1</domain>
-		<user>user1</user>
-		<password>XXXYYYZZZ</password>
-        <!--
-		<token>1234567890abcdef</token>
-        -->
+		<!-- Mediaflux user's authentication domain -->
+		<domain>system</domain>
+		<!-- Mediaflux username -->
+		<user>wilson</user>
+		<!-- Mediaflux user's password -->
+		<password>change_me</password>
+		<!-- Mediaflux secure identity token -->
+		<token>xxxyyyzzz</token>
 	</credential>
 	<sync>
 		<settings>
-			<numberOfWorkers>2</numberOfWorkers>
+			<!-- Number of workers/threads to upload data concurrently -->
+			<numberOfWorkers>8</numberOfWorkers>
+			<!-- Number of checkers/threads to compare local files with remote assets -->
+			<maxNumberOfCheckers>4</maxNumberOfCheckers>
+			<!-- Batch size for checking files with remote assets. Set to 1 will check 
+				files one by one, which will slow down significantly when there are large 
+				number of small files. -->
+			<checkBatchSize>100</checkBatchSize>
+			<!-- Compare CRC32 checksum after uploading -->
 			<csumCheck>true</csumCheck>
-			<watchDaemon>false</watchDaemon>
+			<!-- Running a daemon in background to scan for local file system changes 
+				periodically. -->
+			<daemon enabled="true">
+				<listenerPort>9761</listenerPort>
+				<!-- Time interval (in milliseconds) between scans -->
+				<scanInterval>60000</scanInterval>
+			</daemon>
+			<!-- Log directory location -->
 			<logDirectory>/tmp</logDirectory>
-			<excludeEmptyFolder>false</excludeEmptyFolder>
-            <notification>
-                <email>user1@your-domain.org</email>
-            </notification>
+			<!-- Exclude empty directories for uploading -->
+			<excludeEmptyFolder>true</excludeEmptyFolder>
+			<!-- Send notifications when jobs complete (Non-daemon mode only) -->
+			<notification>
+				<!-- The email recipients. Can be multiple. -->
+				<email>wliu5@unimelb.edu.au</email>
+			</notification>
 		</settings>
-		<job>
-			<directory>/tmp/src-dir1</directory>
-			<namespace parent="true">/test</namespace>
-			<include>.*\.txt$</include>
+		<!-- Upload jobs -->
+		<job type="upload">
+			<!-- source directory -->
+			<directory>/path/to/src-directory1</directory>
+			<!-- destination asset namespace. Set parent attribute to true if the 
+				namespace should be a parent namespace. -->
+			<project parent="true">51</project>
+			<!-- inclusive filter. The filter below select all sub-directories' name 
+				start with wilson under the source directory, and all their descendants. -->
+			<include>wilson*/**</include>
+			<!-- exclusive filter. The filter below excludes all files with name: 
+				.DS_store -->
+			<exclude>**/.DS_Store</exclude>
 		</job>
-		<job>
-			<directory>/tmp/src-dir2</directory>
-			<namespace parent="true">/test</namespace>
-			<exclude>.*\.bin$</exclude>
+		<job type="upload">
+			<!-- source directory -->
+			<directory>/path/to/src-directory2</directory>
+			<!-- destination asset namespace -->
+			<namespace parent="false">/path/to/dst-namespace2</namespace>
+			<!-- The filter below excludes all .class files. -->
+			<exclude>**/*.class</exclude>
 		</job>
 	</sync>
 </properties>
- ```
+```
 
-## IV. Limitations
+## 3. Examples:
 
-### 1. (In daemon mode) namespaces contains soft-destroyed assets cannot be destroyed
-  * When running as daemon by specifying --watch argument, local file deletions will NOT be synchronised unless --sync.local.deletion is enabled;
-  * If daemon mode is enabled, when a local file is deleted, the corresponding remote asset will be **soft-destroyed**. When a local directory is deleted, all the assets in the corresponding remote namespace are **soft-destroyed**. But we cannot hide the namespace that contains only soft-destroyed assets.
+### 3.1. Upload single directory
 
-### 2. (In daemon mode) renaming/moving a directory causes file uploads
-  * When monitoring the changes in the local directory with --watch argument, **DIRECTORY_RENAME** event cannot be detected. This is due to the limitation of Java File Watcher Service. Instead, **DIRECTORY_DELETE** and **DIRECTORY_CREATE** events are triggered when renaming/moving a directory. This will cause the **NAMESPACE_DESTROY** and **NAMESPACE_CREATE** action on Mediaflux server. Since the assets are **soft** destroyed, the above (two) actions will cause reuploading the directory to a different location and double the storage usage.
+To upload directory **/data/src-dir1** to asset namespace **/projects/cryo-em/proj-abc-1128.4.66**
+  * **option 1**:  using configuration file:
+```xml
+<sync>
+    <job type="upload">
+        <directory>/data/src-dir1</directory>
+        <namespace parent="true">/projects/cryo-em/proj-abc-1128.4.66</namespace>
+    </job>
+</sync>
+```
+  * **option 2**: using command arguments:
+    * **`mf-sync /data/src-dir1 /projects/cryo-em/proj-abc-1128.4.66`**
+
+### 3.2. Run **mf-sync** as daemon:
+
+  * **option 1**: using configuration file:
+```xml
+<sync>
+    <settings>
+        <daemon enabled="true">
+            <listenerPort>9761</listenerPort>
+            <scanInterval>60000</scanInterval>
+        </daemon>
+    </settings>
+</sync>
+```
+  * **option 2**: using command arguments:
+    * **`mf-sync --daemon --daemon-port 9761 --daemon-scan-interval 60000`**
+
+### 3.3. Upload multiple directories
+
+You can only achieve this by using the configuration file.
+```xml
+<sync>
+    <job type="upload">
+        <directory>/data/src-dir1</directory>
+        <namespace parent="true">/projects/cryo-em/proj-abc-1128.4.66</namespace>
+    </job>
+    <job type="upload">
+        <directory>/data/src-dir2</directory>
+        <namespace parent="true">/projects/cryo-em/proj-abc-1128.4.67</namespace>
+    </job>
+</sync>
+```
+
+### 3.4. Upload matching files/directories by specifying pattern selectors/filters
+
+  * Upload all (direct) sub-directories with name starts with _**wilson**_; and exclude all files with name _**.DS_Store**_
+```xml
+<sync>
+    <job type="upload">
+        <directory>/data/raw-data</directory>
+	<include>wilson*/**</include>
+	<exclude>**/.DS_Store</exclude>
+        <namespace parent="true">/projects/cryo-em/proj-abc-1128.4.68</namespace>
+    </job>
+</sync>
+```
+
+### 3.5. Configure to send notification emails (non-daemon mode)
+```xml
+<sync>
+    <settings>
+        <notification>
+            <email>admin1@your-domain.org</email>
+            <email>admin2@your-domain.org</email>
+	</notification>
+    </settings>
+</sync>
+```
+
+### 3.6. In daemon mode, check the status of the daemon
+
+When running **mf-sync** in daemon mode, you can run netcat to send command to the daemon listener port to check the status of the daemon:
+  * **`echo status | nc localhost 9761`**
+
+In the above example, 9761 is the daemon listener port. The **mf-sync** restrict to listen to only localhost. You cannot access the port remotely.
+
+ 
+
+
