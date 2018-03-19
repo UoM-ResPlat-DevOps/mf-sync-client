@@ -65,7 +65,7 @@ The **mf-sync** loads the configuration file in the following order:
   2) if **--conf** argument is specified, load configuration from the file (and it will overwrite the values loaded previously);
   3) if specified in the command line, it will overwrite the values loaded previously;
 
-* **[Sample XML configuration file](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/blob/master/src/main/config/mf-sync-properties.sample.xml) (with property descriptions as comments)**
+### **[Sample XML configuration file](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/blob/master/src/main/config/mf-sync-properties.sample.xml) (with property descriptions as comments)**
 ```xml
 <?xml version="1.0"?>
 <properties>
