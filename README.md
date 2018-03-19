@@ -20,21 +20,31 @@ USAGE:
     mf-sync [options] [<src-directory> <dst-asset-namespace>]
 
 DESCRIPTION:
-    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. 
-It can also run in background as a daemon to scan for local changes in the directory and upload to the asset 
-namespace.
+    mf-sync is a tool to upload files and directories to Mediaflux server. It supports also daemon mode, which runs in background to scan for local changes and upload to Mediaflux.
 
 OPTIONS:
     --help                               Display help information.
-    --conf <config-file>                 The configuration file. Note: this argument is optional. If not specified, 
-defaults to ~/.mediaflux/mf-sync-properties.xml (or %USERPROFILE%\.mediaflux\mf-sync-properties.xml on Windows).
+    --mf.host <host>                     The Mediaflux server host.
+    --mf.port <port>                     The Mediaflux server port.
+    --mf.transport <transport>           The Mediaflux server transport, can be http, https or tcp/ip.
+    --mf.auth <domain,user,password>     The Mediaflux user authentication deatils.
+    --mf.token <token>                   The Mediaflux secure identity token.
+    --conf <config-file>                 The configuration file. Defaults to '~/.mediaflux/mf-sync.properties'
+    --number-of-workers <n>              Number of worker threads to upload the files. If not specified, defaults to 1.
+    --max-checkers <n>                   Maximum number of checker threads to compare local files with Mediaflux assets. If not specified, defaults to 1.
+    --check-batch-size <n>               Batch size for comparing files with Mediaflux assets. Defaults to 100, which checks 100 files within single service request.
+    --exclude-empty-folder               Exclude empty folders. In other words, upload files only.
+    --csum-check                         Validate CRC32 checksum after uploading. It will slow down the proccess.
+    --notification-emails  <a@b.org>     The (comma-separated) email addresses for notification recipients.
+    --log-dir <logging-directory>        The directory for log files. If not specified, defaults to current work directory.
+    --daemon                             Runs as a daemon to periodically scan the changes and upload.
+    --daemon-port                        The listening port of the daemon. Defaults to 9761. It accepts connection from localhost only. It responds to 'status' and 'stop' requests. If 'status', it responds with the current application status; If 'stop', it will shutdown the daemon and exit the application. You can use netcat to send command to the daemon listener port, e.g 'echo status | nc localhost 9761' or to stop the daemon 'echo stop | nc localhost 9761'
+    --daemon-scan-interval               The time interval in milliseconds between scans. Defaults to 60000 (1 minute). It only starts scanning when the daemon is idle. In other words, it skips scans if previous scan or upload has not completed. 
 
 POSITIONAL ARGUMENTS:
     <src-directory>                      The source directory.
-    <dst-asset-namespace>                The destination asset namespace.
-Note: If source directory and destination namespace are not specified in command line. 
-They must be specified in the configuration file.
-
+    <dst-asset-namespace>                The destination (parent) asset namespace.
+    Note: to specify multiple 'source directory' and 'destination asset namespace' pairs, you need to add them to the configuration file as upload jobs.
 ```
 
 ### **Examples:**
