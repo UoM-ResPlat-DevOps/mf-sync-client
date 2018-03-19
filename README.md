@@ -3,12 +3,12 @@ A client application to upload local files to Mediaflux server. It can also be c
 
 ## 1. Installation
 
-* 1) [Java 8](https://java.com/en/download/) must be installed.
-* 2) Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
-* 3) Unzip it to the install directory:
+* a. [Java 8](https://java.com/en/download/) must be installed.
+* b. Download latest release from: [https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases](https://github.com/UoM-ResPlat-DevOps/mf-sync-client/releases)
+* c. Unzip it to the install directory:
   * **`cd opt; sudo unzip ~/Downloads/mf-sync-client-x.y.z.zip`**
   * **`sudo ln -s /opt/mf-sync-client-x.y.z /opt/mf-sync-client`**
-* 4) (Optionally, if you are using Bash shell) You can edit your **`~/.bashrc`** file to add **mf-sync** to your environment variable.
+* d. (Optionally, if you are using Bash shell) You can edit your **`~/.bashrc`** file to add **mf-sync** to your environment variable.
   * **`echo "export PATH=/opt/mf-sync-client:$PATH" >> ~/.bashrc`**
 
 ## 2. Usage
