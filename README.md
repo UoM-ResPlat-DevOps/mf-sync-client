@@ -190,11 +190,3 @@ kill -15 <pid>
 </properties>
  ```
 
-## IV. Limitations
-
-### 1. (In daemon mode) namespaces contains soft-destroyed assets cannot be destroyed
-  * When running as daemon by specifying --watch argument, local file deletions will NOT be synchronised unless --sync.local.deletion is enabled;
-  * If daemon mode is enabled, when a local file is deleted, the corresponding remote asset will be **soft-destroyed**. When a local directory is deleted, all the assets in the corresponding remote namespace are **soft-destroyed**. But we cannot hide the namespace that contains only soft-destroyed assets.
-
-### 2. (In daemon mode) renaming/moving a directory causes file uploads
-  * When monitoring the changes in the local directory with --watch argument, **DIRECTORY_RENAME** event cannot be detected. This is due to the limitation of Java File Watcher Service. Instead, **DIRECTORY_DELETE** and **DIRECTORY_CREATE** events are triggered when renaming/moving a directory. This will cause the **NAMESPACE_DESTROY** and **NAMESPACE_CREATE** action on Mediaflux server. Since the assets are **soft** destroyed, the above (two) actions will cause reuploading the directory to a different location and double the storage usage.
