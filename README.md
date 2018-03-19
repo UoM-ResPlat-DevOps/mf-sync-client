@@ -52,11 +52,100 @@ POSITIONAL ARGUMENTS:
 
 ### 2.2. Configuration file
 
-You can specify the arguments in the command line or specify the corresponding properties in the configuration file. The **mf-sync** loads the configuration file in the following order:
-  1) try loading from default location: _**~/.mediaflux/mf-sync-properties.xml**_;
-  2) if **--conf** argument specified, load configuration from the file (and it will overwrite the values loaded previously);
+Alternative to command line arguments, you can also specify the corresponding properties in a XML configuration file. The **mf-sync** loads the configuration file in the following order:
+  1) try loading the configration file from its default location: _**~/.mediaflux/mf-sync-properties.xml**_;
+  2) if **--conf** argument is specified, load configuration from the file (and it will overwrite the values loaded previously);
   3) if specified in the command line, it will overwrite the values loaded previously;
 
+* **Sample XML configuration file (with property descriptions as comments)**
+```
+<?xml version="1.0"?>
+<properties>
+	<server>
+		<!-- Mediaflux server host -->
+		<host>mediaflux.vicnode.org.au</host>
+		<!-- Mediaflux server port -->
+		<port>443</port>
+		<!-- Mediaflux server transport. https, http or tcp/ip -->
+		<protocol>https</protocol>
+		<session>
+			<!-- Retry times on Mediaflux connection failure -->
+			<connectRetryTimes>1</connectRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
+			<connectRetryInterval>1000</connectRetryInterval>
+			<!-- Retry times on service execution error -->
+			<executeRetryTimes>1</executeRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
+			<executeRetryInterval>1000</executeRetryInterval>
+		</session>
+	</server>
+	<credential>
+		<!-- Application name. Can be used as application key for secure identity 
+			token -->
+		<app>mf-sync</app>
+		<!-- Mediaflux user's authentication domain -->
+		<domain>system</domain>
+		<!-- Mediaflux username -->
+		<user>wilson</user>
+		<!-- Mediaflux user's password -->
+		<password>change_me</password>
+		<!-- Mediaflux secure identity token -->
+		<token>xxxyyyzzz</token>
+	</credential>
+	<sync>
+		<settings>
+			<!-- Number of workers/threads to upload data concurrently -->
+			<numberOfWorkers>8</numberOfWorkers>
+			<!-- Number of checkers/threads to compare local files with remote assets -->
+			<maxNumberOfCheckers>4</maxNumberOfCheckers>
+			<!-- Batch size for checking files with remote assets. Set to 1 will check 
+				files one by one, which will slow down significantly when there are large 
+				number of small files. -->
+			<checkBatchSize>100</checkBatchSize>
+			<!-- Compare CRC32 checksum after uploading -->
+			<csumCheck>true</csumCheck>
+			<!-- Running a daemon in background to scan for local file system changes 
+				periodically. -->
+			<daemon enabled="true">
+				<listenerPort>9761</listenerPort>
+				<!-- Time interval (in milliseconds) between scans -->
+				<scanInterval>60000</scanInterval>
+			</daemon>
+			<!-- Log directory location -->
+			<logDirectory>/tmp</logDirectory>
+			<!-- Exclude empty directories for uploading -->
+			<excludeEmptyFolder>true</excludeEmptyFolder>
+			<!-- Send notifications when jobs complete (Non-daemon mode only) -->
+			<notification>
+				<!-- The email recipients. Can be multiple. -->
+				<email>wliu5@unimelb.edu.au</email>
+			</notification>
+		</settings>
+		<!-- Upload jobs -->
+		<job type="upload">
+			<!-- source directory -->
+			<directory>/path/to/src-directory1</directory>
+			<!-- destination asset namespace. Set parent attribute to true if the 
+				namespace should be a parent namespace. -->
+			<project parent="true">51</project>
+			<!-- inclusive filter. The filter below select all sub-directories' name 
+				start with wilson under the source directory, and all their descendants. -->
+			<include>wilson*/**</include>
+			<!-- exclusive filter. The filter below excludes all files with name: 
+				.DS_store -->
+			<exclude>**/.DS_Store</exclude>
+		</job>
+		<job type="upload">
+			<!-- source directory -->
+			<directory>/path/to/src-directory2</directory>
+			<!-- destination asset namespace -->
+			<namespace parent="false">/path/to/dst-namespace2</namespace>
+			<!-- The filter below excludes all .class files. -->
+			<exclude>**/*.class</exclude>
+		</job>
+	</sync>
+</properties>
+```
 ### **Examples:**
 
 1. Start **`mf-sync`** and load configuration file from specified location.
