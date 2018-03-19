@@ -70,45 +70,86 @@ kill -15 <pid>
 <?xml version="1.0"?>
 <properties>
 	<server>
-		<host>mediaflux.your-domain.org</host>
+		<!-- Mediaflux server host -->
+		<host>mediaflux.vicnode.org.au</host>
+		<!-- Mediaflux server port -->
 		<port>443</port>
+		<!-- Mediaflux server transport. https, http or tcp/ip -->
 		<protocol>https</protocol>
 		<session>
-			<connectRetryTimes>5</connectRetryTimes>
+			<!-- Retry times on Mediaflux connection failure -->
+			<connectRetryTimes>1</connectRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
 			<connectRetryInterval>1000</connectRetryInterval>
-			<executeRetryTimes>5</executeRetryTimes>
+			<!-- Retry times on service execution error -->
+			<executeRetryTimes>1</executeRetryTimes>
+			<!-- Time interval (in milliseconds) between retries -->
 			<executeRetryInterval>1000</executeRetryInterval>
 		</session>
 	</server>
 	<credential>
+		<!-- Application name. Can be used as application key for secure identity 
+			token -->
 		<app>mf-sync</app>
-		<domain>domain1</domain>
-		<user>user1</user>
-		<password>XXXYYYZZZ</password>
-        <!--
-		<token>1234567890abcdef</token>
-        -->
+		<!-- Mediaflux user's authentication domain -->
+		<domain>system</domain>
+		<!-- Mediaflux username -->
+		<user>wilson</user>
+		<!-- Mediaflux user's password -->
+		<password>change_me</password>
+		<!-- Mediaflux secure identity token -->
+		<token>xxxyyyzzz</token>
 	</credential>
 	<sync>
 		<settings>
-			<numberOfWorkers>2</numberOfWorkers>
+			<!-- Number of workers/threads to upload data concurrently -->
+			<numberOfWorkers>8</numberOfWorkers>
+			<!-- Number of checkers/threads to compare local files with remote assets -->
+			<maxNumberOfCheckers>4</maxNumberOfCheckers>
+			<!-- Batch size for checking files with remote assets. Set to 1 will check 
+				files one by one, which will slow down significantly when there are large 
+				number of small files. -->
+			<checkBatchSize>100</checkBatchSize>
+			<!-- Compare CRC32 checksum after uploading -->
 			<csumCheck>true</csumCheck>
-			<watchDaemon>false</watchDaemon>
+			<!-- Running a daemon in background to scan for local file system changes 
+				periodically. -->
+			<daemon enabled="true">
+				<listenerPort>9761</listenerPort>
+				<!-- Time interval (in milliseconds) between scans -->
+				<scanInterval>60000</scanInterval>
+			</daemon>
+			<!-- Log directory location -->
 			<logDirectory>/tmp</logDirectory>
-			<excludeEmptyFolder>false</excludeEmptyFolder>
-            <notification>
-                <email>user1@your-domain.org</email>
-            </notification>
+			<!-- Exclude empty directories for uploading -->
+			<excludeEmptyFolder>true</excludeEmptyFolder>
+			<!-- Send notifications when jobs complete (Non-daemon mode only) -->
+			<notification>
+				<!-- The email recipients. Can be multiple. -->
+				<email>wliu5@unimelb.edu.au</email>
+			</notification>
 		</settings>
-		<job>
-			<directory>/tmp/src-dir1</directory>
-			<namespace parent="true">/test</namespace>
-			<include>.*\.txt$</include>
+		<!-- Upload jobs -->
+		<job type="upload">
+			<!-- source directory -->
+			<directory>/path/to/src-directory1</directory>
+			<!-- destination asset namespace. Set parent attribute to true if the 
+				namespace should be a parent namespace. -->
+			<project parent="true">51</project>
+			<!-- inclusive filter. The filter below select all sub-directories' name 
+				start with wilson under the source directory, and all their descendants. -->
+			<include>wilson*/**</include>
+			<!-- exclusive filter. The filter below excludes all files with name: 
+				.DS_store -->
+			<exclude>**/.DS_Store</exclude>
 		</job>
-		<job>
-			<directory>/tmp/src-dir2</directory>
-			<namespace parent="true">/test</namespace>
-			<exclude>.*\.bin$</exclude>
+		<job type="upload">
+			<!-- source directory -->
+			<directory>/path/to/src-directory2</directory>
+			<!-- destination asset namespace -->
+			<namespace parent="false">/path/to/dst-namespace2</namespace>
+			<!-- The filter below excludes all .class files. -->
+			<exclude>**/*.class</exclude>
 		</job>
 	</sync>
 </properties>
