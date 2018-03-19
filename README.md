@@ -13,8 +13,11 @@ A client application to upload local files to Mediaflux server. It can also be c
 
 ## 2. Usage
 
-The command `mf-sync` is be executed in a Unix terminal (or Windows Command Prompt window). The command usage is described below:
+The command `mf-sync` is be executed in a Unix terminal (or Windows Command Prompt). 
 
+### 2.1. Command arguments
+
+The arguments of **mf-sync** are described below:
 ```
 USAGE:
     mf-sync [options] [<src-directory> <dst-asset-namespace>]
@@ -46,6 +49,13 @@ POSITIONAL ARGUMENTS:
     <dst-asset-namespace>                The destination (parent) asset namespace.
     Note: to specify multiple 'source directory' and 'destination asset namespace' pairs, you need to add them to the configuration file as upload jobs.
 ```
+
+### 2.2. Configuration file
+
+You can specify the arguments in the command line or specify the corresponding properties in the configuration file. The **mf-sync** loads the configuration file in the following order:
+  1) try loading from default location: _**~/.mediaflux/mf-sync-properties.xml**_;
+  2) if **--conf** argument specified, load configuration from the file (and it will overwrite the values loaded previously);
+  3) if specified in the command line, it will overwrite the values loaded previously;
 
 ### **Examples:**
 
