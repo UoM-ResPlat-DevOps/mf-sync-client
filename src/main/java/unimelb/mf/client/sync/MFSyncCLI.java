@@ -80,22 +80,83 @@ public class MFSyncCLI {
                 } else if (args[i].equals("--mf.sid")) {
                     connectionSettings.setSessionKey(args[i + 1]);
                     i += 2;
+                } else if (args[i].equals("--conf")) {
+                    // skip. Because it was processed previously.
+                    i += 2;
                 } else if (args[i].equals("--number-of-workers")) {
                     try {
                         syncSettings.setNumberOfWorkers(Integer.parseInt(args[i + 1]));
                     } catch (NumberFormatException nfe) {
-                        throw new IllegalArgumentException("Invalid number of workers: " + args[i + 1], nfe);
+                        throw new IllegalArgumentException("Invalid --number-of-workers: " + args[i + 1], nfe);
+                    }
+                    i += 2;
+                } else if (args[i].equals("--max-checkers")) {
+                    try {
+                        syncSettings.setMaxNumberOfCheckers(Integer.parseInt(args[i + 1]));
+                    } catch (NumberFormatException nfe) {
+                        throw new IllegalArgumentException("Invalid --max-checkers: " + args[i + 1], nfe);
+                    }
+                    i += 2;
+                } else if (args[i].equals("--check-batch-size")) {
+                    try {
+                        syncSettings.setCheckBatchSize(Integer.parseInt(args[i + 1]));
+                    } catch (NumberFormatException nfe) {
+                        throw new IllegalArgumentException("Invalid --check-batch-size: " + args[i + 1], nfe);
+                    }
+                    i += 2;
+                } else if (args[i].equals("--exclude-empty-folder")) {
+                    syncSettings.setExcludeEmptyFolder(true);
+                    i++;
+                } else if (args[i].equals("--csum-check")) {
+                    syncSettings.setCsumCheck(true);
+                    i++;
+                } else if (args[i].equals("--notification-emails")) {
+                    String[] emails = args[i + 1].indexOf(',') != -1 ? args[i + 1].split(",")
+                            : new String[] { args[i + 1] };
+                    if (emails != null && emails.length > 0) {
+                        for (String email : emails) {
+                            if (email != null) {
+                                email = email.trim();
+                                if (!email.isEmpty()) {
+                                    syncSettings.addNotificationEmailAddress(email);
+                                }
+                            }
+                        }
                     }
                     i += 2;
                 } else if (args[i].equals("--daemon")) {
                     syncSettings.setWatchDaemon(true);
                     i++;
-                } else if (args[i].equals("--csum-check")) {
-                    syncSettings.setCsumCheck(true);
-                    i++;
-                } else if (args[i].equals("--exclude-empty-folder")) {
-                    syncSettings.setExcludeEmptyFolder(true);
-                    i++;
+                } else if (args[i].equals("--daemon-port")) {
+                    try {
+                        int daemonPort = Integer.parseInt(args[i + 1]);
+                        if (daemonPort < 0 || daemonPort > 65535) {
+                            throw new IllegalArgumentException(
+                                    "Invalid --daemon-port value. Expects a positive integer between 1 and 65535. Found: "
+                                            + args[i + 1]);
+                        }
+                        syncSettings.setDaemonListenerPort(daemonPort);
+                    } catch (NumberFormatException nfe) {
+                        throw new IllegalArgumentException(
+                                "Invalid --daemon-port value. Expects a positive integer between 1 and 65535. Found: "
+                                        + args[i + 1],
+                                nfe);
+                    }
+                    i += 2;
+                } else if (args[i].equals("--daemon-scan-interval")) {
+                    try {
+                        int scanInterval = Integer.parseInt(args[i + 1]);
+                        if (scanInterval < 0) {
+                            throw new IllegalArgumentException("Invalid --daemon-scan-interval: " + args[i + 1]);
+                        }
+                        syncSettings.setDaemonScanInterval(scanInterval);
+                    } catch (NumberFormatException nfe) {
+                        throw new IllegalArgumentException(
+                                "Invalid --daemon-scan-interval value. Expects a positive integer value. Found: "
+                                        + args[i + 1],
+                                nfe);
+                    }
+                    i += 2;
                 } else if (args[i].equals("--log-dir")) {
                     Path logDir = Paths.get(args[i + 1]);
                     if (Files.exists(logDir) && Files.isDirectory(logDir)) {
@@ -104,8 +165,6 @@ public class MFSyncCLI {
                         throw new IllegalArgumentException("Invalid log.dir argument. Directory: '" + args[i + 1]
                                 + "' is not found or it is not a directory.");
                     }
-                    i += 2;
-                } else if (args[i].equals("--conf")) {
                     i += 2;
                 } else {
                     if (directory == null) {
@@ -170,10 +229,10 @@ public class MFSyncCLI {
         // @formatter:off
         System.out.println();
         System.out.println("USAGE:");
-        System.out.println("    "+ MFSync.APP_NAME + " [options] [src-directory dst-asset-namespace]");
+        System.out.println("    "+ MFSync.APP_NAME + " [options] [<src-directory> <dst-asset-namespace>]");
         System.out.println();
         System.out.println("DESCRIPTION:");
-        System.out.println("    " + MFSync.APP_NAME + " is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. It can also run as a daemon to monitor the local changes in the directory and synchronize to the asset namespace.");
+        System.out.println("    " + MFSync.APP_NAME + " is a tool to upload files and directories to Mediaflux server. It supports also daemon mode, which runs in background to scan for local changes and upload to Mediaflux.");
         System.out.println();
         System.out.println("OPTIONS:");
         System.out.println("    --help                               Display help information.");
@@ -182,17 +241,23 @@ public class MFSyncCLI {
         System.out.println("    --mf.transport <transport>           The Mediaflux server transport, can be http, https or tcp/ip.");
         System.out.println("    --mf.auth <domain,user,password>     The Mediaflux user authentication deatils.");
         System.out.println("    --mf.token <token>                   The Mediaflux secure identity token.");
-        System.out.println("    --mf.sid <sid>                       The Mediaflux session id.");
-        System.out.println("    --daemon                             Start a daemon to periodically scan the changes in the specified directory.");
-        System.out.println("    --csum-check                         Validate CRC32 checksum are upload. It will slow down the upload process.");
-        System.out.println("    --exclude-empty-folder               Exclude empty folders.");
-        System.out.println("    --number-of-workers <n>              Number of worker threads to upload the files. Defaults to 1.");
-        System.out.println("    --log-dir <logging-directory>        The directory to save the logs. Defaults to current work directory.");
-        System.out.println("    --conf <config-file>                 The configuration file. Defaults to ~/.mediaflux/mf-sync.properties Note: settings in the configuration file can be overridden by the command arguments.");
+        System.out.println("    --conf <config-file>                 The configuration file. Defaults to '~/.mediaflux/mf-sync.properties'");
+        System.out.println("    --number-of-workers <n>              Number of worker threads to upload the files. If not specified, defaults to 1.");
+        System.out.println("    --max-checkers <n>                   Maximum number of checker threads to compare local files with Mediaflux assets. If not specified, defaults to 1."); 
+        System.out.println("    --check-batch-size <n>               Batch size for comparing files with Mediaflux assets. Defaults to 100, which checks 100 files within single service request."); 
+        System.out.println("    --exclude-empty-folder               Exclude empty folders. In other words, upload files only.");
+        System.out.println("    --csum-check                         Validate CRC32 checksum after uploading. It will slow down the proccess.");    
+        System.out.println("    --notification-emails  <a@b.org>     The (comma-separated) email addresses for notification recipients.");
+        System.out.println("    --log-dir <logging-directory>        The directory for log files. If not specified, defaults to current work directory.");
+        System.out.println("    --daemon                             Runs as a daemon to periodically scan the changes and upload.");
+        System.out.println("    --daemon-port                        The listening port of the daemon. Defaults to 9761. It accepts connection from localhost only. It responds to 'status' and 'stop' requests. If 'status', it responds with the current application status; If 'stop', it will shutdown the daemon and exit the application. You can use netcat to send command to the daemon listener port, e.g 'echo status | nc localhost 9761' or to stop the daemon 'echo stop | nc localhost 9761'");
+        System.out.println("    --daemon-scan-interval               The time interval in milliseconds between scans. Defaults to 60000 (1 minute). It only starts scanning when the daemon is idle. In other words, it skips scans if previous scan or upload has not completed. "); 
+        
         System.out.println();
         System.out.println("POSITIONAL ARGUMENTS:");        
-        System.out.println("    <src-directory>                      The local sourcedirectory to upload/synchronize from.");
-        System.out.println("    <dst-asset-namespace>                The remote (parent) destination asset namespace to upload/synchronize to.");
+        System.out.println("    <src-directory>                      The source directory.");
+        System.out.println("    <dst-asset-namespace>                The destination (parent) asset namespace.");
+        System.out.println("    Note: to specify multiple 'source directory' and 'destination asset namespace' pairs, you need to add them to the configuration file as upload jobs.");
         System.out.println();
         // @formatter:on
     }

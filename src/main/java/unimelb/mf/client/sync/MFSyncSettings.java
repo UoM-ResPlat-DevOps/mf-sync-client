@@ -145,24 +145,28 @@ public class MFSyncSettings {
             }
             String relativePath = PathUtils.relativePath(_dir, path);
             if (haveIncludePatterns) {
-                for (String include : _pathIncludes) {
-                    String regexInclude = PathPattern.toRegEx(include);
-                    if (relativePath.matches(regexInclude)) {
-                        return true;
-                    }
+                if (haveExcludePatterns) {
+                    return matchesAny(relativePath, _pathIncludes) && !matchesAny(relativePath, _pathExcludes);
+                } else {
+                    return matchesAny(relativePath, _pathIncludes);
                 }
-                return false;
-            }
-            if (haveExcludePatterns) {
-                for (String exclude : _pathExcludes) {
-                    String regexExclude = PathPattern.toRegEx(exclude);
-                    if (relativePath.matches(regexExclude)) {
-                        return false;
-                    }
+            } else {
+                if (haveExcludePatterns) {
+                    return !matchesAny(relativePath, _pathExcludes);
+                } else {
+                    return true;
                 }
-                return true;
             }
-            return true;
+        }
+
+        static boolean matchesAny(String relativePath, Collection<String> patterns) {
+            for (String pattern : patterns) {
+                String regex = PathPattern.toRegEx(pattern);
+                if (relativePath.matches(regex)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public boolean matchPath(File path) {
@@ -196,7 +200,7 @@ public class MFSyncSettings {
     private boolean _csumCheck = false;
     private boolean _excludeEmptyFolder = false;
     private Path _logDirectory = MFSync.DEFAULT_LOG_DIR;
-    private Collection<String> _emailAddresses = null;
+    private Set<String> _emailAddresses = null;
 
     public MFSyncSettings(XmlDoc.Element pe) throws Throwable {
         if (pe != null) {
@@ -250,7 +254,7 @@ public class MFSyncSettings {
         _csumCheck = se.booleanValue("settings/csumCheck", false);
         _excludeEmptyFolder = se.booleanValue("settings/excludeEmptyFolder", false);
         _logDirectory = Paths.get(se.stringValue("settings/logDirectory", System.getProperty("user.dir")));
-        _emailAddresses = se.values("settings/notification/email");
+        setNotificationEmailAddresses(se.values("settings/notification/email"));
         List<XmlDoc.Element> jes = se.elements("job");
         if (jes == null || jes.isEmpty()) {
             throw new Exception(
@@ -507,6 +511,26 @@ public class MFSyncSettings {
             for (String email : _emailAddresses) {
                 ps.println("        mail: " + email);
             }
+        }
+    }
+
+    public void addNotificationEmailAddress(String emailAddr) {
+        if (_emailAddresses == null) {
+            _emailAddresses = new LinkedHashSet<String>();
+        }
+        if (emailAddr != null) {
+            _emailAddresses.add(emailAddr);
+        }
+    }
+
+    public void setNotificationEmailAddresses(Collection<String> emailAddresses) {
+        if (_emailAddresses == null) {
+            _emailAddresses = new LinkedHashSet<String>();
+        } else {
+            _emailAddresses.clear();
+        }
+        if (emailAddresses != null && !emailAddresses.isEmpty()) {
+            _emailAddresses.addAll(emailAddresses);
         }
     }
 
