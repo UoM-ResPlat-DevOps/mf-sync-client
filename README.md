@@ -20,15 +20,14 @@ USAGE:
     mf-sync [options] [<src-directory> <dst-asset-namespace>]
 
 DESCRIPTION:
-    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux 
-asset namespace. It can also run in background as a daemon to scan for local changes in the 
-directory and upload to the asset namespace.
+    mf-sync is a tool to upload local files from the specified directory to remote Mediaflux asset namespace. 
+It can also run in background as a daemon to scan for local changes in the directory and upload to the asset 
+namespace.
 
 OPTIONS:
     --help                               Display help information.
-    --conf <config-file>                 The configuration file. Note: this argument is optional. 
-If not specified, defaults to ~/.mediaflux/mf-sync-properties.xml 
-(or %USERPROFILE%\.mediaflux\mf-sync-properties.xml on Windows).
+    --conf <config-file>                 The configuration file. Note: this argument is optional. If not specified, 
+defaults to ~/.mediaflux/mf-sync-properties.xml (or %USERPROFILE%\.mediaflux\mf-sync-properties.xml on Windows).
 
 POSITIONAL ARGUMENTS:
     <src-directory>                      The source directory.
