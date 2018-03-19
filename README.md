@@ -217,6 +217,7 @@ You can only achieve this by using the configuration file.
     </job>
 </sync>
 ```
+More details about the pattern syntax, see [here](http://ant.apache.org/manual/dirtasks.html#patterns)
 
 ### 3.5. Configure to send notification emails (non-daemon mode)
 ```xml
