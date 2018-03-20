@@ -211,6 +211,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
                 printSummary(System.out);
                 mailSummary();
                 _session.stopPingServerPeriodically();
+                _session.discard();
                 stopDaemonListener();
             }
 
@@ -307,6 +308,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
             _producerThreadPool.shutdownNow();
         }
         _session.stopPingServerPeriodically();
+        _session.discard();
         if (_settings.daemonEnabled() && _daemonListenerThread != null && !_daemonListenerThread.isInterrupted()) {
             stopDaemonListener();
         }
