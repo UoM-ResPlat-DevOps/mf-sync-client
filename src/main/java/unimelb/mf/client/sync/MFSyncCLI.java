@@ -250,8 +250,8 @@ public class MFSyncCLI {
         System.out.println("    --notification-emails  <a@b.org>     The (comma-separated) email addresses for notification recipients.");
         System.out.println("    --log-dir <logging-directory>        The directory for log files. If not specified, defaults to current work directory.");
         System.out.println("    --daemon                             Runs as a daemon to periodically scan the changes and upload.");
-        System.out.println("    --daemon-port                        The listening port of the daemon. Defaults to 9761. It accepts connection from localhost only. It responds to 'status' and 'stop' requests. If 'status', it responds with the current application status; If 'stop', it will shutdown the daemon and exit the application. You can use netcat to send command to the daemon listener port, e.g 'echo status | nc localhost 9761' or to stop the daemon 'echo stop | nc localhost 9761'");
-        System.out.println("    --daemon-scan-interval               The time interval in milliseconds between scans. Defaults to 60000 (1 minute). It only starts scanning when the daemon is idle. In other words, it skips scans if previous scan or upload has not completed. "); 
+        System.out.println("    --daemon-port <port>                 The listening port of the daemon. Defaults to 9761. It accepts connection from localhost only. It responds to 'status' and 'stop' requests. If 'status', it responds with the current application status; If 'stop', it will shutdown the daemon and exit the application. You can use netcat to send command to the daemon listener port, e.g 'echo status | nc localhost 9761' or to stop the daemon 'echo stop | nc localhost 9761'");
+        System.out.println("    --daemon-scan-interval <millisecs>   The time interval in milliseconds between scans. Defaults to 60000 (1 minute). It only starts scanning when the daemon is idle. In other words, it skips scans if previous scan or upload has not completed. "); 
         
         System.out.println();
         System.out.println("POSITIONAL ARGUMENTS:");        
