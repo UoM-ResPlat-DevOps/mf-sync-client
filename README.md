@@ -230,7 +230,7 @@ You can only achieve this by using the configuration file.
 </sync>
 ```
 
-  * Note: If both **include** and **exclude** filters are specified. First, files are selected from the **includes**. Then, this file set is trimmed of all files match **any** **excludes**.
+  * **Note:** If both **include** and **exclude** filters are specified. First, files are selected from the **includes**. Then, this file set is trimmed of all files match **any** **excludes**.
 
   * More details about the pattern syntax, see [here](http://ant.apache.org/manual/dirtasks.html#patterns)
 
