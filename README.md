@@ -126,7 +126,7 @@ The **mf-sync** loads the configuration file in the following order:
 			<!-- Send notifications when jobs complete (Non-daemon mode only) -->
 			<notification>
 				<!-- The email recipients. Can be multiple. -->
-				<email>wliu5@unimelb.edu.au</email>
+				<email>admin@your-domain.org</email>
 			</notification>
 		</settings>
 		<!-- Upload jobs -->
