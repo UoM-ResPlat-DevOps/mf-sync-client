@@ -24,6 +24,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import arc.mf.client.ServerClient;
 import arc.utils.CanAbort;
 import arc.xml.XmlDoc;
 import arc.xml.XmlStringWriter;
@@ -309,7 +310,8 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
         w.push("service", new String[] { "name", "asset.exists" });
         w.add("id", "path=" + path);
         w.pop();
-        XmlDoc.Element re = session.execute("service.execute", w.document(), null, null, this);
+        XmlDoc.Element re = session.execute("service.execute", w.document(), (List<ServerClient.Input>) null, null,
+                this);
         return new SimpleEntry<Boolean, Boolean>(
                 re.booleanValue("reply[@service='asset.namespace.exists']/response/exists"),
                 re.booleanValue("reply[@service='asset.exists']/response/exists"));
@@ -320,7 +322,7 @@ public class FileWatchTaskProducer implements Runnable, HasAbortableOperation {
         w.add("where", "namespace>='" + namespace + "'");
         w.add("action", "pipe");
         w.add("service", new String[] { "name", "asset.soft.destroy" });
-        _session.execute("asset.query", w.document(), null, null, this);
+        _session.execute("asset.query", w.document(), (List<ServerClient.Input>) null, null, this);
     }
 
     @Override

@@ -10,7 +10,7 @@ public class VicNodeProject {
     public static String getProjectNamespace(MFSession session, int projectNumber) throws Throwable {
         XmlStringWriter w = new XmlStringWriter();
         w.add("ordinal", projectNumber);
-        return session.execute("vicnode.project.find", w.document(), null, null).value("project/@namespace");
+        return session.execute("vicnode.project.find", w.document()).value("project/@namespace");
     }
 
 }

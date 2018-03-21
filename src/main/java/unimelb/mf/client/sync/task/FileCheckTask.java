@@ -46,7 +46,7 @@ public class FileCheckTask extends AbstractTask {
             for (String assetPath : assetPaths) {
                 w1.add("id", "path=" + assetPath);
             }
-            List<XmlDoc.Element> ees = session.execute("asset.exists", w1.document(), null, null).elements("exists");
+            List<XmlDoc.Element> ees = session.execute("asset.exists", w1.document()).elements("exists");
 
             int nbExists = 0;
             XmlStringWriter w2 = new XmlStringWriter();
@@ -63,7 +63,7 @@ public class FileCheckTask extends AbstractTask {
             if (nbExists > 0) {
                 List<String> undestroy = new ArrayList<String>();
                 List<FileUploadTask> update = new ArrayList<FileUploadTask>();
-                List<XmlDoc.Element> aes = session.execute("asset.get", w2.document(), null, null).elements("asset");
+                List<XmlDoc.Element> aes = session.execute("asset.get", w2.document()).elements("asset");
                 int nbSkipped = 0;
                 for (XmlDoc.Element ae : aes) {
 
@@ -135,7 +135,7 @@ public class FileCheckTask extends AbstractTask {
                         w3.add("id", assetId);
                     }
                     logInfo("undestroy soft-destroyed assets...");
-                    session.execute("asset.soft.undestroy", w3.document(), null, null);
+                    session.execute("asset.soft.undestroy", w3.document());
                 }
                 if (!update.isEmpty()) {
                     for (FileUploadTask task : update) {

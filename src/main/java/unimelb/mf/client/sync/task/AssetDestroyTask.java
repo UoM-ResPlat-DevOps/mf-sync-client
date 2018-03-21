@@ -1,8 +1,10 @@
 package unimelb.mf.client.sync.task;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.logging.Logger;
 
+import arc.mf.client.ServerClient;
 import arc.xml.XmlStringWriter;
 import unimelb.mf.client.session.MFSession;
 import unimelb.mf.client.util.PathUtils;
@@ -28,7 +30,7 @@ public class AssetDestroyTask extends SyncTask {
         setWorkProgressed(0);
         XmlStringWriter w = new XmlStringWriter();
         w.add("id", "path=" + _assetPath);
-        session.execute("asset.soft.destroy", w.document(), null, null, this);
+        session.execute("asset.soft.destroy", w.document(), (List<ServerClient.Input>) null, null, this);
         setWorkProgressed(1);
     }
 

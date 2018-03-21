@@ -79,7 +79,7 @@ public class AssetSyncTaskProducer implements Runnable {
                 w.add("xpath", new String[] { "ename", "csize" }, "content/size");
                 w.add("xpath", new String[] { "ename", "csum" }, "content/csum");
                 w.add("xpath", new String[] { "ename", "mtime" }, "meta/" + PosixAttributes.DOC_TYPE + "/mtime");
-                XmlDoc.Element re = _session.execute("asset.query", w.document(), null, null, null);
+                XmlDoc.Element re = _session.execute("asset.query", w.document());
                 List<XmlDoc.Element> aes = re.elements("asset");
                 if (aes != null) {
                     // check if corresponding files exist
@@ -135,7 +135,7 @@ public class AssetSyncTaskProducer implements Runnable {
                         for (String assetId : assetsToDelete) {
                             w2.add("id", assetId);
                         }
-                        _session.execute("asset.soft.destroy", w2.document(), null, null, null);
+                        _session.execute("asset.soft.destroy", w2.document());
                     }
                 }
                 completed = re.longValue("cursor/remaining") == 0;

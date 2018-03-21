@@ -230,7 +230,7 @@ public class MFSync implements Runnable, Loggable, FileUploadListener {
             }
             w.add("subject", MFSync.APP_NAME.toUpperCase() + " Summary");
             w.add("body", getSummary());
-            _session.execute("mail.send", w.document(), null, null);
+            _session.execute("mail.send", w.document());
         }
     }
 

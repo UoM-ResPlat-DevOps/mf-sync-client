@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.logging.Logger;
 
 import arc.mf.client.ServerClient;
@@ -53,7 +54,7 @@ public class AssetDownloadTask extends SyncTask {
         w.add("id", _assetId == null ? ("path=" + _assetPath) : _assetId);
 
         setCurrentOperation("Downloading asset: " + (_assetId == null ? _assetPath : _assetId));
-        session.execute("asset.get", w.document(), null, new ServerClient.OutputConsumer() {
+        session.execute("asset.get", w.document(), (List<ServerClient.Input>) null, new ServerClient.OutputConsumer() {
 
             @Override
             protected void consume(Element re, LongInputStream in) throws Throwable {
