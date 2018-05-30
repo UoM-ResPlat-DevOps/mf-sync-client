@@ -99,6 +99,7 @@ public class FileUploadTask extends SyncTask {
                         try {
                             while ((len = in.read(buffer)) != -1) {
                                 out.write(buffer, 0, len);
+                                _bytesUploaded += len;
                                 incWorkProgress(len);
                                 if (_ul != null) {
                                     _ul.fileUploadProgressed(len);
