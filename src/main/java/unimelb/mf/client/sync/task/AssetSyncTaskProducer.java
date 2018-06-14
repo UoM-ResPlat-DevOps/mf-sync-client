@@ -72,6 +72,7 @@ public class AssetSyncTaskProducer implements Runnable {
                 XmlStringWriter w = new XmlStringWriter();
                 w.add("where", "namespace>='" + _rootNamespace + "'");
                 w.add("action", "get-value");
+                w.add("count", true);
                 w.add("size", _pageSize);
                 w.add("idx", idx);
                 w.add("xpath", new String[] { "ename", "path" },
@@ -138,6 +139,7 @@ public class AssetSyncTaskProducer implements Runnable {
                         _session.execute("asset.soft.destroy", w2.document());
                     }
                 }
+                idx += _pageSize;
                 completed = re.longValue("cursor/remaining") == 0;
             } while (!completed);
         } catch (Throwable e) {
